@@ -5,7 +5,11 @@ using OrderSync.Models;
 
 namespace OrderSync.Services;
 
-public class OrderSyncService(MockShopClient shop, OrderSyncDbContext db, ILogger<OrderSyncService> logger)
+public class OrderSyncService(
+    MockShopClient shop,
+    OrderSyncDbContext db,
+    OrderChangeNotifier notifier,
+    ILogger<OrderSyncService> logger)
 {
     /// <summary>
     /// Fetches orders from the webshop and registers the ones we have not seen yet as Pending.
@@ -24,12 +28,11 @@ public class OrderSyncService(MockShopClient shop, OrderSyncDbContext db, ILogge
             .Select(o => new SyncedOrder { OrderId = o.OrderId })
             .ToList();
 
-        // TODO: create Moneybird invoices for pending orders once the client exists.
-
         if (newOrders.Count > 0)
         {
             db.SyncedOrders.AddRange(newOrders);
             await db.SaveChangesAsync(cancellationToken);
+            notifier.NotifyChanged();
         }
 
         logger.LogInformation("Fetched {Total} orders from shop, {New} new", orders.Count, newOrders.Count);

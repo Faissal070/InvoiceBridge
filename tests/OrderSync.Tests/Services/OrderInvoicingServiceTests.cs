@@ -53,6 +53,74 @@ public sealed class OrderInvoicingServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Synced_order_keeps_a_snapshot_of_the_invoice()
+    {
+        await AddOrderAsync("WS-1", customer: "Levi van Leeuwen",
+            lines: [new MockOrderLine("Koffiebonen", 2, 12.50m), new MockOrderLine("Theemok", 1, 9.95m)]);
+
+        await RunAsync();
+
+        var order = await GetOrderAsync("WS-1");
+        Assert.Equal("Levi van Leeuwen", order.CustomerName);
+        Assert.Equal(new DateOnly(2026, 10, 1), order.InvoiceDate);
+        Assert.Equal(34.95m, order.Total);
+        Assert.Equal(
+            [("Koffiebonen", 2, 12.50m), ("Theemok", 1, 9.95m)],
+            order.InvoiceLines.OrderBy(l => l.Id).Select(l => (l.Description, l.Quantity, l.UnitPrice)));
+    }
+
+    [Fact]
+    public async Task Adopted_invoice_also_gets_a_snapshot()
+    {
+        await AddOrderAsync("WS-1");
+        moneybird.Invoices.Add(new MoneybirdInvoice("inv-earlier", "WS-1"));
+
+        await RunAsync();
+
+        var order = await GetOrderAsync("WS-1");
+        Assert.Equal(25.00m, order.Total);
+        Assert.Single(order.InvoiceLines);
+    }
+
+    [Fact]
+    public async Task Backfill_adds_snapshot_to_earlier_synced_orders_without_calling_moneybird()
+    {
+        var earlier = Now.AddDays(-1);
+        await AddOrderAsync("WS-1", SyncStatus.Synced);
+        using (var db = new OrderSyncDbContext(dbOptions))
+        {
+            await db.SyncedOrders.ExecuteUpdateAsync(s => s
+                .SetProperty(o => o.MoneybirdInvoiceId, "inv-old")
+                .SetProperty(o => o.SyncedAt, earlier));
+        }
+
+        Assert.Equal(1, await CreateService().BackfillSnapshotsAsync());
+        Assert.Equal(0, await CreateService().BackfillSnapshotsAsync());
+
+        var order = await GetOrderAsync("WS-1");
+        Assert.Equal("Sanne de Vries", order.CustomerName);
+        Assert.Equal(25.00m, order.Total);
+        Assert.Single(order.InvoiceLines);
+        Assert.Equal("inv-old", order.MoneybirdInvoiceId);
+        Assert.Equal(earlier, order.SyncedAt);
+        Assert.Equal(0, moneybird.FindInvoiceCalls);
+    }
+
+    [Fact]
+    public async Task Invoice_order_invoices_only_that_order()
+    {
+        await AddOrderAsync("WS-1");
+        await AddOrderAsync("WS-2");
+
+        Assert.True(await CreateService().InvoiceOrderAsync((await GetOrderAsync("WS-2")).Id));
+
+        Assert.Equal(SyncStatus.Pending, (await GetOrderAsync("WS-1")).Status);
+        Assert.Equal(SyncStatus.Synced, (await GetOrderAsync("WS-2")).Status);
+        Assert.False(await CreateService().InvoiceOrderAsync((await GetOrderAsync("WS-2")).Id));
+        Assert.Single(moneybird.CreatedInvoices);
+    }
+
+    [Fact]
     public async Task New_contact_is_created_with_split_name()
     {
         await AddOrderAsync("WS-1", customer: "Levi van Leeuwen");
@@ -138,9 +206,45 @@ public sealed class OrderInvoicingServiceTests : IDisposable
         Assert.Equal(new InvoiceRunResult(0, 1, false), result);
         var order = await GetOrderAsync("WS-1");
         Assert.Equal(SyncStatus.Failed, order.Status);
-        Assert.Equal("Moneybird weigerde de gegevens (422): prijs ongeldig", order.LastError);
+        Assert.Equal("Moneybird heeft de factuurgegevens geweigerd.", order.LastError);
         Assert.Equal(1, order.Attempts);
         Assert.Null(order.MoneybirdInvoiceId);
+    }
+
+    [Fact]
+    public async Task Webshop_outage_fails_with_friendly_reason_and_retry_succeeds()
+    {
+        await AddOrderAsync("WS-1");
+        shop.Unavailable = true;
+
+        await RunAsync();
+
+        var failed = await GetOrderAsync("WS-1");
+        Assert.Equal(SyncStatus.Failed, failed.Status);
+        Assert.Equal("De webshop was even niet bereikbaar.", failed.LastError);
+        Assert.Equal(0, moneybird.FindInvoiceCalls);
+
+        shop.Unavailable = false;
+        Assert.True(await CreateService().RetryOrderAsync(failed.Id));
+
+        var synced = await GetOrderAsync("WS-1");
+        Assert.Equal(SyncStatus.Synced, synced.Status);
+        Assert.Equal(2, synced.Attempts);
+        Assert.Single(moneybird.CreatedInvoices);
+    }
+
+    [Fact]
+    public async Task Status_changes_are_announced()
+    {
+        await AddOrderAsync("WS-1");
+        var notifier = new OrderChangeNotifier();
+        var changes = 0;
+        notifier.Changed += () => changes++;
+
+        await CreateService(notifier).InvoicePendingOrdersAsync();
+
+        // Once when claimed (Processing), once when done (Synced).
+        Assert.Equal(2, changes);
     }
 
     [Fact]
@@ -260,19 +364,19 @@ public sealed class OrderInvoicingServiceTests : IDisposable
 
     private async Task<InvoiceRunResult> RunAsync() => await CreateService().InvoicePendingOrdersAsync();
 
-    private OrderInvoicingService CreateService()
+    private OrderInvoicingService CreateService(OrderChangeNotifier? notifier = null)
     {
         var db = new OrderSyncDbContext(dbOptions);
         var shopClient = new MockShopClient(new HttpClient(shop, disposeHandler: false) { BaseAddress = new Uri("http://shop.test/") });
-        return new OrderInvoicingService(db, moneybird, shopClient, time, NullLogger<OrderInvoicingService>.Instance);
+        return new OrderInvoicingService(db, moneybird, shopClient, notifier ?? new OrderChangeNotifier(), time, NullLogger<OrderInvoicingService>.Instance);
     }
 
     private async Task AddOrderAsync(string orderId, SyncStatus status = SyncStatus.Pending,
-        DateTimeOffset? lastAttemptAt = null, string customer = "Sanne de Vries")
+        DateTimeOffset? lastAttemptAt = null, string customer = "Sanne de Vries", MockOrderLine[]? lines = null)
     {
         shop.Orders.Add(new MockOrder(orderId, customer, $"klant-{orderId}@example.nl",
             new DateTimeOffset(2026, 10, 1, 9, 30, 0, TimeSpan.FromHours(2)),
-            [new MockOrderLine("Koffiebonen", 2, 12.50m)]));
+            lines ?? [new MockOrderLine("Koffiebonen", 2, 12.50m)]));
 
         using var db = new OrderSyncDbContext(dbOptions);
         db.SyncedOrders.Add(new SyncedOrder
@@ -288,7 +392,7 @@ public sealed class OrderInvoicingServiceTests : IDisposable
     private async Task<SyncedOrder> GetOrderAsync(string orderId)
     {
         using var db = new OrderSyncDbContext(dbOptions);
-        return await db.SyncedOrders.AsNoTracking().SingleAsync(o => o.OrderId == orderId);
+        return await db.SyncedOrders.AsNoTracking().Include(o => o.InvoiceLines).SingleAsync(o => o.OrderId == orderId);
     }
 
     private sealed class FixedTime(DateTimeOffset now) : TimeProvider
@@ -299,9 +403,15 @@ public sealed class OrderInvoicingServiceTests : IDisposable
     private sealed class ShopHandler : HttpMessageHandler
     {
         public List<MockOrder> Orders { get; } = [];
+        public bool Unavailable { get; set; }
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
+            if (Unavailable)
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
+            }
+
             var id = Uri.UnescapeDataString(request.RequestUri!.Segments[^1]);
             var order = Orders.FirstOrDefault(o => o.OrderId == id);
             return Task.FromResult(order is null

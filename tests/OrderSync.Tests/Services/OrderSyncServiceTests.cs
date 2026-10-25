@@ -113,7 +113,7 @@ public sealed class OrderSyncServiceTests : IDisposable
         {
             BaseAddress = new Uri("http://shop.test/")
         });
-        var service = new OrderSyncService(client, db, NullLogger<OrderSyncService>.Instance);
+        var service = new OrderSyncService(client, db, new OrderChangeNotifier(), NullLogger<OrderSyncService>.Instance);
         return await service.SyncNewOrdersAsync();
     }
 

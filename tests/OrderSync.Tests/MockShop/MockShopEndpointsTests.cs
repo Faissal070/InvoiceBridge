@@ -81,4 +81,35 @@ public class MockShopEndpointsTests(MockShopAppFactory factory) : IClassFixture<
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
+
+    [Fact]
+    public async Task Added_demo_order_is_listed_and_retrievable()
+    {
+        // Own factory: adding orders would affect the shared fixture's other tests.
+        using var app = new MockShopAppFactory();
+        var http = app.CreateClient();
+        var order = DemoOrderFactory.Create("WS-20261021", DateTimeOffset.UtcNow, new Random(1));
+        app.Services.GetRequiredService<MockOrderStore>().TryAdd(order);
+
+        var orders = await http.GetFromJsonAsync<List<MockOrder>>("/mockshop/orders");
+        var fetched = await http.GetFromJsonAsync<MockOrder>("/mockshop/orders/WS-20261021");
+
+        Assert.Equal(21, orders!.Count);
+        Assert.Equal("WS-20261021", orders[^1].OrderId);
+        Assert.Equal(order.CustomerName, fetched!.CustomerName);
+    }
+
+    [Fact]
+    public async Task Simulated_outage_returns_503_once_then_the_order()
+    {
+        using var app = new MockShopAppFactory();
+        var http = app.CreateClient();
+        app.Services.GetRequiredService<MockOrderStore>().SimulateOutage("WS-20261003");
+
+        var first = await http.GetAsync("/mockshop/orders/WS-20261003");
+        var second = await http.GetAsync("/mockshop/orders/WS-20261003");
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, first.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, second.StatusCode);
+    }
 }

@@ -7,6 +7,8 @@ public class OrderSyncDbContext(DbContextOptions<OrderSyncDbContext> options) : 
 {
     public DbSet<SyncedOrder> SyncedOrders => Set<SyncedOrder>();
 
+    public DbSet<InvoiceLine> InvoiceLines => Set<InvoiceLine>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<SyncedOrder>(entity =>
@@ -15,6 +17,16 @@ public class OrderSyncDbContext(DbContextOptions<OrderSyncDbContext> options) : 
             entity.Property(o => o.OrderId).HasMaxLength(50);
             entity.Property(o => o.Status).HasConversion<string>().HasMaxLength(20);
             entity.Property(o => o.MoneybirdInvoiceId).HasMaxLength(50);
+            entity.Property(o => o.CustomerName).HasMaxLength(200);
+            entity.HasMany(o => o.InvoiceLines)
+                .WithOne()
+                .HasForeignKey(l => l.SyncedOrderId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<InvoiceLine>(entity =>
+        {
+            entity.Property(l => l.Description).HasMaxLength(200);
         });
     }
 
