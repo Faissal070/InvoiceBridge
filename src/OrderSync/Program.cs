@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Components.Server.Circuits;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using OrderSync.Clients;
 using OrderSync.Components;
@@ -29,6 +31,18 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<OrderInvoicingService>();
 builder.Services.AddHostedService<OrderSyncWorker>();
 
+builder.Services.Configure<DemoOptions>(builder.Configuration.GetSection(DemoOptions.SectionName));
+builder.Services.AddSingleton<DemoRateLimiter>();
+builder.Services.AddScoped<DemoOrderService>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<VisitorContext>();
+builder.Services.AddScoped<CircuitHandler, VisitorCircuitHandler>();
+
+// Behind a reverse proxy the visitor's IP (for the demo limits) comes from X-Forwarded-For.
+// Only loopback proxies are trusted by default; add the host's proxy to KnownProxies if needed.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto);
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
@@ -37,6 +51,7 @@ using (var scope = app.Services.CreateScope())
 }
 
 // Configure the HTTP request pipeline.
+app.UseForwardedHeaders();
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);

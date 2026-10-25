@@ -23,6 +23,9 @@ public class SyncedOrder
 
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 
+    /// <summary>Placed by a visitor of the live demo; counts towards the demo limits.</summary>
+    public bool IsDemo { get; set; }
+
     // Snapshot of the invoice, filled in when the order is synced.
 
     public string? CustomerName { get; set; }

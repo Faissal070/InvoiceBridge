@@ -63,6 +63,9 @@ namespace OrderSync.Data.Migrations
                     b.Property<DateOnly?>("InvoiceDate")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("IsDemo")
+                        .HasColumnType("INTEGER");
+
                     b.Property<long?>("LastAttemptAt")
                         .HasColumnType("INTEGER");
 
