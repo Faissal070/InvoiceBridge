@@ -1,3 +1,5 @@
+using OrderSync.Models;
+
 namespace OrderSync.MockShop;
 
 /// <summary>

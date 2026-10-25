@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using OrderSync.Models;
 
 namespace OrderSync.Data;
 

@@ -19,7 +19,7 @@ namespace OrderSync.Data.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.13");
 
-            modelBuilder.Entity("OrderSync.Data.SyncedOrder", b =>
+            modelBuilder.Entity("OrderSync.Models.SyncedOrder", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()

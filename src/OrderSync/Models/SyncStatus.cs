@@ -1,4 +1,4 @@
-namespace OrderSync.Data;
+namespace OrderSync.Models;
 
 public enum SyncStatus
 {

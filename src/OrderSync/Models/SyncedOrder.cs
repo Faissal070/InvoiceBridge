@@ -1,4 +1,4 @@
-namespace OrderSync.Data;
+namespace OrderSync.Models;
 
 /// <summary>
 /// Tracks the sync state of a single webshop order towards Moneybird.

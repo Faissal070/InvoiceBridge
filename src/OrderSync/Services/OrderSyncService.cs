@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
+using OrderSync.Clients;
 using OrderSync.Data;
+using OrderSync.Models;
 
-namespace OrderSync.Sync;
+namespace OrderSync.Services;
 
 public class OrderSyncService(MockShopClient shop, OrderSyncDbContext db, ILogger<OrderSyncService> logger)
 {

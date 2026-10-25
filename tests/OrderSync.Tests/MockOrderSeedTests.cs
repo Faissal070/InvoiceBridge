@@ -1,4 +1,5 @@
 using OrderSync.MockShop;
+using OrderSync.Models;
 
 namespace OrderSync.Tests;
 

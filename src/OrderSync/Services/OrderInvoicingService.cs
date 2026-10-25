@@ -1,12 +1,11 @@
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
+using OrderSync.Clients;
 using OrderSync.Data;
-using OrderSync.MockShop;
-using OrderSync.Moneybird;
+using OrderSync.Exceptions;
+using OrderSync.Models;
 
-namespace OrderSync.Sync;
-
-public record InvoiceRunResult(int Synced, int Failed, bool RateLimited, bool NotConfigured = false);
+namespace OrderSync.Services;
 
 /// <summary>
 /// Turns registered orders into Moneybird invoices, guaranteeing at most one invoice per order.

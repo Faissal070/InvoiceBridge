@@ -6,7 +6,8 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OrderSync.MockShop;
-using OrderSync.Sync;
+using OrderSync.Models;
+using OrderSync.Workers;
 
 namespace OrderSync.Tests;
 
