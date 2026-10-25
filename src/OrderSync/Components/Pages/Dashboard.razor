@@ -1,6 +1,7 @@
 @page "/dashboard"
 @rendermode InteractiveServer
 @implements IDisposable
+@using System.Globalization
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.Extensions.Options
 @using OrderSync.Data
@@ -9,6 +10,9 @@
 @using OrderSync.Services
 @inject IServiceScopeFactory ScopeFactory
 @inject IOptions<MoneybirdOptions> MoneybirdOptions
+@inject IOptions<DemoOptions> DemoOptions
+@inject OrderChangeNotifier Notifier
+@inject VisitorContext Visitor
 @inject ILogger<Dashboard> Logger
 
 <PageTitle>Dashboard</PageTitle>
@@ -23,9 +27,10 @@
     </div>
 }
 
-<div class="d-flex gap-2 mb-3">
+<div class="d-flex flex-wrap gap-2 mb-3">
     <button class="btn btn-outline-secondary" @onclick="RefreshAsync" disabled="@busy">Vernieuwen</button>
-    <button class="btn btn-primary" @onclick="SyncNowAsync" disabled="@busy">Nu synchroniseren</button>
+    <button class="btn btn-primary" @onclick="() => PlaceOrderAsync(simulateOutage: false)" disabled="@busy">Nieuwe bestelling plaatsen</button>
+    <button class="btn btn-outline-warning" @onclick="() => PlaceOrderAsync(simulateOutage: true)" disabled="@busy">Bestelling met storing</button>
 </div>
 
 @if (message is not null)
@@ -61,6 +66,8 @@ else
             <thead>
                 <tr>
                     <th>Order</th>
+                    <th>Klant</th>
+                    <th>Bedrag</th>
                     <th>Status</th>
                     <th>Pogingen</th>
                     <th>Laatste poging</th>
@@ -75,12 +82,14 @@ else
                 {
                     <tr class="@(order.Status == SyncStatus.Failed ? "table-danger" : null)">
                         <td>@order.OrderId</td>
+                        <td>@order.CustomerName</td>
+                        <td>@FormatAmount(order.Total)</td>
                         <td><span class="badge @BadgeClass(order.Status)">@Label(order.Status)</span></td>
                         <td>@order.Attempts</td>
                         <td>@FormatDate(order.LastAttemptAt)</td>
                         <td class="small">@(order.Status == SyncStatus.Failed ? order.LastError : null)</td>
                         <td>
-                            @if (order.MoneybirdInvoiceId is not null)
+                            @if (order.MoneybirdInvoiceId is not null && DemoOptions.Value.ShowMoneybirdLinks)
                             {
                                 <a href="@InvoiceUrl(order.MoneybirdInvoiceId)" target="_blank" rel="noopener">Bekijk factuur</a>
                             }
@@ -103,28 +112,51 @@ else
 
 @code {
     private static readonly TimeSpan AutoRefreshInterval = TimeSpan.FromSeconds(15);
+    private static readonly CultureInfo Dutch = CultureInfo.GetCultureInfo("nl-NL");
 
     private List<SyncedOrder>? orders;
     private string? message;
     private bool messageIsError;
     private bool busy;
     private Timer? refreshTimer;
+    private int refreshQueued;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadAsync();
-        // The background worker updates orders; keep the page current while it is open.
-        refreshTimer = new Timer(_ => InvokeAsync(async () =>
+        Notifier.Changed += OnOrdersChanged;
+        // Fallback in case a change notification is missed.
+        refreshTimer = new Timer(_ => OnOrdersChanged(), null, AutoRefreshInterval, AutoRefreshInterval);
+    }
+
+    public void Dispose()
+    {
+        Notifier.Changed -= OnOrdersChanged;
+        refreshTimer?.Dispose();
+    }
+
+    /// <summary>Reloads once for a burst of changes; called from other threads.</summary>
+    private void OnOrdersChanged()
+    {
+        if (Interlocked.Exchange(ref refreshQueued, 1) == 1)
         {
-            if (!busy)
+            return;
+        }
+
+        _ = InvokeAsync(async () =>
+        {
+            Volatile.Write(ref refreshQueued, 0);
+            try
             {
                 await LoadAsync();
                 StateHasChanged();
             }
-        }), null, AutoRefreshInterval, AutoRefreshInterval);
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Refreshing the dashboard failed");
+            }
+        });
     }
-
-    public void Dispose() => refreshTimer?.Dispose();
 
     private async Task RefreshAsync()
     {
@@ -143,41 +175,42 @@ else
             .ToListAsync();
     }
 
-    private Task SyncNowAsync() => RunAsync("Synchroniseren", async services =>
+    private Task PlaceOrderAsync(bool simulateOutage) => RunAsync("Bestelling plaatsen", async services =>
     {
-        var parts = new List<string>();
-        try
+        var placed = await services.GetRequiredService<DemoOrderService>().PlaceOrderAsync(Visitor.VisitorId, simulateOutage);
+        if (!placed.Accepted)
         {
-            var count = await services.GetRequiredService<OrderSyncService>().SyncNewOrdersAsync();
-            parts.Add($"{count} nieuwe bestelling(en) opgehaald");
-        }
-        catch (Exception ex)
-        {
-            // Still invoice what is already pending.
-            Logger.LogError(ex, "Fetching orders failed");
-            parts.Add($"ophalen mislukt: {ex.Message}");
+            message = placed.RefusedReason;
             messageIsError = true;
+            return;
         }
 
-        var result = await services.GetRequiredService<OrderInvoicingService>().InvoicePendingOrdersAsync();
-        if (result.NotConfigured)
+        var orderId = placed.Order!.OrderId;
+        message = $"Bestelling {orderId} van {placed.Order.CustomerName} ontvangen. Factuur wordt aangemaakt...";
+        StateHasChanged();
+
+        await services.GetRequiredService<OrderInvoicingService>().InvoiceOrderAsync(placed.SyncedOrderId!.Value);
+        await LoadAsync();
+        var order = orders!.Single(o => o.Id == placed.SyncedOrderId);
+        messageIsError = order.Status == SyncStatus.Failed;
+        message = order.Status switch
         {
-            parts.Add("factureren overgeslagen (Moneybird niet geconfigureerd)");
-        }
-        else
-        {
-            parts.Add($"{result.Synced} gefactureerd, {result.Failed} mislukt");
-            if (result.RateLimited) parts.Add("gestopt door Moneybird rate limit");
-            messageIsError |= result.Failed > 0;
-        }
-        message = string.Join("; ", parts) + ".";
+            SyncStatus.Synced => $"Bestelling {orderId} is gefactureerd.",
+            SyncStatus.Failed => $"Bestelling {orderId} kon nog niet worden gefactureerd: {order.LastError}",
+            _ => $"Bestelling {orderId} wordt gefactureerd."
+        };
     });
 
     private Task RetryAsync(SyncedOrder order) => RunAsync($"Opnieuw proberen {order.OrderId}", async services =>
     {
-        var ok = await services.GetRequiredService<OrderInvoicingService>().RetryOrderAsync(order.Id);
-        message = ok ? $"{order.OrderId} is gefactureerd." : $"{order.OrderId} is opnieuw mislukt; zie de reden in de tabel.";
-        messageIsError = !ok;
+        var result = await services.GetRequiredService<DemoOrderService>().RetryAsync(Visitor.VisitorId, order.Id);
+        message = result switch
+        {
+            { Attempted: false } => result.RefusedReason,
+            { Synced: true } => $"{order.OrderId} is gefactureerd.",
+            _ => $"{order.OrderId} is opnieuw mislukt; zie de reden in de tabel."
+        };
+        messageIsError = !result.Synced;
     });
 
     private async Task RunAsync(string action, Func<IServiceProvider, Task> work)
@@ -193,7 +226,7 @@ else
         catch (Exception ex)
         {
             Logger.LogError(ex, "{Action} failed", action);
-            message = $"{action} mislukt: {ex.Message}";
+            message = $"{action} mislukt. Probeer het later opnieuw.";
             messageIsError = true;
         }
         finally
@@ -207,6 +240,8 @@ else
         $"https://moneybird.com/{Uri.EscapeDataString(MoneybirdOptions.Value.AdministrationId ?? "")}/sales_invoices/{Uri.EscapeDataString(invoiceId)}";
 
     private static string? FormatDate(DateTimeOffset? date) => date?.ToLocalTime().ToString("dd-MM-yyyy HH:mm");
+
+    private static string? FormatAmount(decimal? amount) => amount?.ToString("C", Dutch);
 
     private static string Label(SyncStatus status) => status switch
     {
