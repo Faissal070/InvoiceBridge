@@ -1,7 +1,151 @@
 ﻿@page "/"
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.Extensions.Options
+@using OrderSync.Data
+@using OrderSync.Models
+@using OrderSync.Options
+@inject OrderSyncDbContext Db
+@inject IOptions<DemoOptions> DemoOptions
 
-<PageTitle>Home</PageTitle>
+<PageTitle>OrderSync – webshopbestellingen automatisch gefactureerd</PageTitle>
 
-<h1>Hello, world!</h1>
+<section class="hero">
+    <div class="hero-copy">
+        <span class="eyebrow"><Icon Name="bolt" Size="14" /> Webshop + Moneybird, automatisch gekoppeld</span>
+        <h1>Elke webshopbestelling automatisch een factuur in Moneybird</h1>
+        <p class="hero-lead">
+            Geen bestellingen meer overtypen. OrderSync ziet nieuwe bestellingen binnenkomen en zet ze
+            binnen enkele seconden klaar als factuur. Ook 's avonds en in het weekend.
+        </p>
+        <div class="hero-actions">
+            <a class="btn btn-primary btn-lg" href="demo">Bekijk de live demo <Icon Name="arrow-right" /></a>
+            <a class="btn btn-secondary btn-lg" href="#zo-werkt-het">Zo werkt het</a>
+        </div>
+        <p class="hero-note"><Icon Name="shield" Size="16" /> Elke bestelling wordt precies één keer gefactureerd.</p>
+    </div>
 
-Welcome to your new app.
+    <div class="flow-backdrop">
+        <div class="flow" aria-label="Voorbeeld: van bestelling tot factuur">
+            <div class="flow-item">
+                <span class="icon-badge"><Icon Name="cart" /></span>
+                <div class="grow">
+                    <strong>Nieuwe bestelling</strong>
+                    <small>@(example?.OrderId ?? "WS-20261021") · @(example?.CustomerName ?? "Sanne de Vries") · @Display.Amount(example?.Total ?? 31.93m)</small>
+                </div>
+            </div>
+            <div class="flow-connector" aria-hidden="true"><span></span></div>
+            <div class="flow-item">
+                <span class="icon-badge"><Icon Name="sync" /></span>
+                <div class="grow">
+                    <strong>OrderSync verwerkt</strong>
+                    <small>Klant opzoeken of aanmaken, regels overnemen</small>
+                </div>
+            </div>
+            <div class="flow-connector" aria-hidden="true"><span></span></div>
+            <div class="flow-item">
+                <span class="icon-badge icon-badge-success"><Icon Name="check" /></span>
+                <div class="grow">
+                    <strong>Factuur klaar in Moneybird</strong>
+                    <small>Als concept, klaar om te versturen</small>
+                </div>
+                <StatusBadge Status="SyncStatus.Synced" />
+            </div>
+            <p class="flow-caption">@(example is null ? "Voorbeeld" : "Laatst verwerkte bestelling in deze demo")</p>
+        </div>
+    </div>
+</section>
+
+<section class="grid-3" aria-label="Resultaten in deze demo">
+    <div class="card card-body stat">
+        <span class="stat-value">@invoiced</span>
+        <span class="stat-label">Facturen automatisch gemaakt</span>
+        <span class="stat-note">In deze demo, zonder dat iemand iets hoefde over te typen.</span>
+    </div>
+    <div class="card card-body stat">
+        <span class="stat-value">@Display.Duration(invoiced * DemoOptions.Value.MinutesSavedPerInvoice)</span>
+        <span class="stat-label">Werk bespaard</span>
+        <span class="stat-note">Schatting: @DemoOptions.Value.MinutesSavedPerInvoice minuten handwerk per factuur.</span>
+    </div>
+    <div class="card card-body stat">
+        <span class="stat-value">0</span>
+        <span class="stat-label">Handmatige stappen</span>
+        <span class="stat-note">Van bestelling tot factuur gaat alles vanzelf.</span>
+    </div>
+</section>
+
+<section class="section" id="zo-werkt-het">
+    <div class="section-head">
+        <h2>Zo werkt het</h2>
+        <p>Je koppelt je webshop één keer aan Moneybird. Daarna gaat elke bestelling dezelfde drie stappen door.</p>
+    </div>
+    <div class="grid-3">
+        <div class="card card-body step">
+            <div class="step-top"><span class="icon-badge"><Icon Name="cart" /></span><span class="step-number">STAP 1</span></div>
+            <h3>Klant bestelt in je webshop</h3>
+            <p>OrderSync kijkt elke paar minuten of er nieuwe bestellingen zijn. Je hoeft niets te doen.</p>
+        </div>
+        <div class="card card-body step">
+            <div class="step-top"><span class="icon-badge"><Icon Name="sync" /></span><span class="step-number">STAP 2</span></div>
+            <h3>De factuur wordt gemaakt</h3>
+            <p>Klantgegevens, producten, aantallen en prijzen worden precies overgenomen in Moneybird.</p>
+        </div>
+        <div class="card card-body step">
+            <div class="step-top"><span class="icon-badge icon-badge-success"><Icon Name="invoice" /></span><span class="step-number">STAP 3</span></div>
+            <h3>Klaar om te versturen</h3>
+            <p>De factuur staat als concept in Moneybird. Jij houdt de controle over wat er verstuurd wordt.</p>
+        </div>
+    </div>
+</section>
+
+<section class="section flush-top">
+    <div class="section-head">
+        <h2>Gebouwd om op te vertrouwen</h2>
+        <p>Een koppeling is pas fijn als je er niet meer naar hoeft om te kijken.</p>
+    </div>
+    <div class="grid-3">
+        <div class="benefit">
+            <span class="icon-badge"><Icon Name="shield" /></span>
+            <div>
+                <h3>Nooit dubbele facturen</h3>
+                <p>Ook na een storing of herstart controleert OrderSync eerst of de factuur al bestaat.</p>
+            </div>
+        </div>
+        <div class="benefit">
+            <span class="icon-badge"><Icon Name="sync" /></span>
+            <div>
+                <h3>Storingen worden opgevangen</h3>
+                <p>Is de webshop of Moneybird even niet bereikbaar? Dan probeert OrderSync het vanzelf opnieuw.</p>
+            </div>
+        </div>
+        <div class="benefit">
+            <span class="icon-badge"><Icon Name="check-circle" /></span>
+            <div>
+                <h3>Altijd inzicht</h3>
+                <p>Je ziet per bestelling of die gefactureerd is, en zo niet, waarom niet, in gewone taal.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="cta-band">
+    <div>
+        <h2>Zie het zelf werken</h2>
+        <p>Plaats een testbestelling en kijk hoe die binnen een paar seconden een factuur wordt.</p>
+    </div>
+    <a class="btn btn-lg" href="demo">Start de live demo <Icon Name="arrow-right" /></a>
+</section>
+
+@code {
+    private int invoiced;
+    private SyncedOrder? example;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var synced = Db.SyncedOrders.AsNoTracking().Where(o => o.Status == SyncStatus.Synced);
+        invoiced = await synced.CountAsync();
+        example = await synced
+            .Where(o => o.CustomerName != null)
+            .OrderByDescending(o => o.SyncedAt)
+            .FirstOrDefaultAsync();
+    }
+}
