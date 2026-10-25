@@ -8,7 +8,7 @@ using OrderSync.Data;
 using OrderSync.Models;
 using OrderSync.Services;
 
-namespace OrderSync.Tests;
+namespace OrderSync.Tests.Services;
 
 public sealed class OrderSyncServiceTests : IDisposable
 {

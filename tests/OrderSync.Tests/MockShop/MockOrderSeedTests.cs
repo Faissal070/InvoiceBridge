@@ -1,7 +1,7 @@
 using OrderSync.MockShop;
 using OrderSync.Models;
 
-namespace OrderSync.Tests;
+namespace OrderSync.Tests.MockShop;
 
 public class MockOrderSeedTests
 {

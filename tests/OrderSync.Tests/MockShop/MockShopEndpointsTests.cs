@@ -9,7 +9,7 @@ using OrderSync.MockShop;
 using OrderSync.Models;
 using OrderSync.Workers;
 
-namespace OrderSync.Tests;
+namespace OrderSync.Tests.MockShop;
 
 public sealed class MockShopAppFactory : WebApplicationFactory<Program>
 {

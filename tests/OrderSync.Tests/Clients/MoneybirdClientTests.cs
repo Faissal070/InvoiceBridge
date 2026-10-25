@@ -7,7 +7,7 @@ using OrderSync.Exceptions;
 using OrderSync.Models;
 using OrderSync.Options;
 
-namespace OrderSync.Tests;
+namespace OrderSync.Tests.Clients;
 
 public class MoneybirdClientTests
 {
