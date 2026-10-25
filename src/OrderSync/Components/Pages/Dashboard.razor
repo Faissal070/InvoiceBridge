@@ -1,0 +1,121 @@
+@page "/dashboard"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using OrderSync.Data
+@using OrderSync.Sync
+@inject IServiceScopeFactory ScopeFactory
+@inject ILogger<Dashboard> Logger
+
+<PageTitle>Dashboard</PageTitle>
+
+<h1>Sync dashboard</h1>
+
+<div class="d-flex gap-2 mb-3">
+    <button class="btn btn-outline-secondary" @onclick="LoadAsync" disabled="@busy">Vernieuwen</button>
+    <button class="btn btn-primary" @onclick="SyncNowAsync" disabled="@busy">Nu synchroniseren</button>
+</div>
+
+@if (message is not null)
+{
+    <div class="alert alert-info">@message</div>
+}
+
+@if (orders is null)
+{
+    <p><em>Laden...</em></p>
+}
+else
+{
+    <div class="d-flex gap-3 mb-3">
+        @foreach (var status in Enum.GetValues<SyncStatus>())
+        {
+            <div class="card text-center" style="min-width: 8rem">
+                <div class="card-body">
+                    <div class="fs-3 fw-bold">@orders.Count(o => o.Status == status)</div>
+                    <span class="badge @BadgeClass(status)">@status</span>
+                </div>
+            </div>
+        }
+    </div>
+
+    @if (orders.Count == 0)
+    {
+        <p>Nog geen bestellingen gesynchroniseerd.</p>
+    }
+    else
+    {
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>Order</th>
+                    <th>Status</th>
+                    <th>Pogingen</th>
+                    <th>Laatste fout</th>
+                    <th>Moneybird-factuur</th>
+                    <th>Gesynchroniseerd op</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var order in orders)
+                {
+                    <tr>
+                        <td>@order.OrderId</td>
+                        <td><span class="badge @BadgeClass(order.Status)">@order.Status</span></td>
+                        <td>@order.Attempts</td>
+                        <td>@order.LastError</td>
+                        <td>@order.MoneybirdInvoiceId</td>
+                        <td>@order.SyncedAt?.ToLocalTime().ToString("dd-MM-yyyy HH:mm")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+
+@code {
+    private List<SyncedOrder>? orders;
+    private string? message;
+    private bool busy;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        using var scope = ScopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<OrderSyncDbContext>();
+        orders = await db.SyncedOrders
+            .AsNoTracking()
+            .OrderByDescending(o => o.CreatedAt)
+            .ThenByDescending(o => o.OrderId)
+            .ToListAsync();
+    }
+
+    private async Task SyncNowAsync()
+    {
+        busy = true;
+        try
+        {
+            using var scope = ScopeFactory.CreateScope();
+            var sync = scope.ServiceProvider.GetRequiredService<OrderSyncService>();
+            var count = await sync.SyncNewOrdersAsync();
+            message = $"{count} nieuwe bestelling(en) gevonden.";
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Manual sync failed");
+            message = $"Synchroniseren mislukt: {ex.Message}";
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private static string BadgeClass(SyncStatus status) => status switch
+    {
+        SyncStatus.Synced => "bg-success",
+        SyncStatus.Failed => "bg-danger",
+        _ => "bg-warning text-dark"
+    };
+}
