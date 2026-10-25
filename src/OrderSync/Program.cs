@@ -19,6 +19,7 @@ builder.Services.AddDbContext<OrderSyncDbContext>(options =>
 builder.Services.AddSingleton<MockOrderStore>();
 builder.Services.AddHttpClient<MockShopClient>(client =>
     client.BaseAddress = new Uri(builder.Configuration["MockShop:BaseUrl"] ?? "http://localhost:5168/"));
+builder.Services.AddSingleton<OrderChangeNotifier>();
 builder.Services.AddScoped<OrderSyncService>();
 
 builder.Services.Configure<MoneybirdOptions>(builder.Configuration.GetSection(MoneybirdOptions.SectionName));

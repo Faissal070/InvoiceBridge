@@ -182,9 +182,45 @@ public sealed class OrderInvoicingServiceTests : IDisposable
         Assert.Equal(new InvoiceRunResult(0, 1, false), result);
         var order = await GetOrderAsync("WS-1");
         Assert.Equal(SyncStatus.Failed, order.Status);
-        Assert.Equal("Moneybird weigerde de gegevens (422): prijs ongeldig", order.LastError);
+        Assert.Equal("Moneybird heeft de factuurgegevens geweigerd.", order.LastError);
         Assert.Equal(1, order.Attempts);
         Assert.Null(order.MoneybirdInvoiceId);
+    }
+
+    [Fact]
+    public async Task Webshop_outage_fails_with_friendly_reason_and_retry_succeeds()
+    {
+        await AddOrderAsync("WS-1");
+        shop.Unavailable = true;
+
+        await RunAsync();
+
+        var failed = await GetOrderAsync("WS-1");
+        Assert.Equal(SyncStatus.Failed, failed.Status);
+        Assert.Equal("De webshop was even niet bereikbaar.", failed.LastError);
+        Assert.Equal(0, moneybird.FindInvoiceCalls);
+
+        shop.Unavailable = false;
+        Assert.True(await CreateService().RetryOrderAsync(failed.Id));
+
+        var synced = await GetOrderAsync("WS-1");
+        Assert.Equal(SyncStatus.Synced, synced.Status);
+        Assert.Equal(2, synced.Attempts);
+        Assert.Single(moneybird.CreatedInvoices);
+    }
+
+    [Fact]
+    public async Task Status_changes_are_announced()
+    {
+        await AddOrderAsync("WS-1");
+        var notifier = new OrderChangeNotifier();
+        var changes = 0;
+        notifier.Changed += () => changes++;
+
+        await CreateService(notifier).InvoicePendingOrdersAsync();
+
+        // Once when claimed (Processing), once when done (Synced).
+        Assert.Equal(2, changes);
     }
 
     [Fact]
@@ -304,11 +340,11 @@ public sealed class OrderInvoicingServiceTests : IDisposable
 
     private async Task<InvoiceRunResult> RunAsync() => await CreateService().InvoicePendingOrdersAsync();
 
-    private OrderInvoicingService CreateService()
+    private OrderInvoicingService CreateService(OrderChangeNotifier? notifier = null)
     {
         var db = new OrderSyncDbContext(dbOptions);
         var shopClient = new MockShopClient(new HttpClient(shop, disposeHandler: false) { BaseAddress = new Uri("http://shop.test/") });
-        return new OrderInvoicingService(db, moneybird, shopClient, time, NullLogger<OrderInvoicingService>.Instance);
+        return new OrderInvoicingService(db, moneybird, shopClient, notifier ?? new OrderChangeNotifier(), time, NullLogger<OrderInvoicingService>.Instance);
     }
 
     private async Task AddOrderAsync(string orderId, SyncStatus status = SyncStatus.Pending,
@@ -343,9 +379,15 @@ public sealed class OrderInvoicingServiceTests : IDisposable
     private sealed class ShopHandler : HttpMessageHandler
     {
         public List<MockOrder> Orders { get; } = [];
+        public bool Unavailable { get; set; }
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
+            if (Unavailable)
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
+            }
+
             var id = Uri.UnescapeDataString(request.RequestUri!.Segments[^1]);
             var order = Orders.FirstOrDefault(o => o.OrderId == id);
             return Task.FromResult(order is null

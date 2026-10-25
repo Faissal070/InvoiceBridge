@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using System.Net;
 using Microsoft.EntityFrameworkCore;
 using OrderSync.Clients;
 using OrderSync.Data;
@@ -22,6 +23,7 @@ public class OrderInvoicingService(
     OrderSyncDbContext db,
     IMoneybirdClient moneybird,
     MockShopClient shop,
+    OrderChangeNotifier notifier,
     TimeProvider time,
     ILogger<OrderInvoicingService> logger)
 {
@@ -105,13 +107,14 @@ public class OrderInvoicingService(
             // Already synced, or claimed by another run.
             return Outcome.Skipped;
         }
+        notifier.NotifyChanged();
 
         var orderId = await db.SyncedOrders.Where(o => o.Id == id).Select(o => o.OrderId).SingleAsync(cancellationToken);
         try
         {
             // Always fetched, also when adopting an invoice, so there is a snapshot to show.
             var order = await shop.GetOrderAsync(orderId, cancellationToken)
-                ?? throw new InvalidOperationException($"Bestelling {orderId} niet gevonden in de webshop.");
+                ?? throw new OrderNotFoundException(orderId);
             var invoiceId = await CreateOrAdoptInvoiceAsync(order, cancellationToken);
             await MarkSyncedAsync(id, invoiceId, order);
             logger.LogInformation("Order {OrderId} invoiced as Moneybird invoice {InvoiceId}", orderId, invoiceId);
@@ -124,17 +127,32 @@ public class OrderInvoicingService(
         }
         catch (Exception ex)
         {
-            var reason = ex switch
-            {
-                MoneybirdException => ex.Message,
-                HttpRequestException => $"Webshop niet bereikbaar: {ex.Message}",
-                _ => $"Onverwachte fout: {ex.Message}"
-            };
+            // The technical details only go to the log; the dashboard shows a reason anyone understands.
+            var reason = FriendlyReason(ex);
             logger.LogWarning(ex, "Invoicing order {OrderId} failed: {Reason}", orderId, reason);
             await MarkFailedAsync(id, reason, cancellationToken);
             return ex is MoneybirdException { IsRateLimited: true } ? Outcome.RateLimited : Outcome.Failed;
         }
+        finally
+        {
+            notifier.NotifyChanged();
+        }
     }
+
+    private static string FriendlyReason(Exception ex) => ex switch
+    {
+        MoneybirdException { IsRateLimited: true } => "Moneybird is even druk. OrderSync probeert het straks opnieuw.",
+        MoneybirdException { StatusCode: HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden } =>
+            "OrderSync heeft geen toegang tot Moneybird. Controleer de koppeling.",
+        MoneybirdException { StatusCode: HttpStatusCode.NotFound } =>
+            "De Moneybird-administratie is niet gevonden. Controleer de koppeling.",
+        MoneybirdException { StatusCode: HttpStatusCode.UnprocessableEntity } => "Moneybird heeft de factuurgegevens geweigerd.",
+        MoneybirdException { StatusCode: null } => "Moneybird was even niet bereikbaar.",
+        MoneybirdException => "Moneybird gaf een onverwachte fout.",
+        HttpRequestException => "De webshop was even niet bereikbaar.",
+        OrderNotFoundException => ex.Message,
+        _ => "Er ging iets onverwachts mis."
+    };
 
     private async Task<string> CreateOrAdoptInvoiceAsync(MockOrder order, CancellationToken cancellationToken)
     {
