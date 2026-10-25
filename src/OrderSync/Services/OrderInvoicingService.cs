@@ -71,6 +71,36 @@ public class OrderInvoicingService(
     }
 
     /// <summary>
+    /// Fills in the invoice snapshot for orders that were synced before snapshots existed.
+    /// Only reads from the webshop; Moneybird is not called.
+    /// </summary>
+    /// <returns>The number of orders that got a snapshot.</returns>
+    public async Task<int> BackfillSnapshotsAsync(CancellationToken cancellationToken = default)
+    {
+        var missing = await db.SyncedOrders
+            .Where(o => o.Status == SyncStatus.Synced && o.MoneybirdInvoiceId != null && o.CustomerName == null)
+            .Select(o => new { o.Id, o.OrderId, o.MoneybirdInvoiceId })
+            .ToListAsync(cancellationToken);
+
+        var filled = 0;
+        foreach (var order in missing)
+        {
+            if (await shop.GetOrderAsync(order.OrderId, cancellationToken) is { } shopOrder)
+            {
+                await SaveSnapshotAsync(order.Id, order.MoneybirdInvoiceId!, shopOrder, syncedAt: null);
+                filled++;
+            }
+        }
+
+        if (filled > 0)
+        {
+            logger.LogInformation("Added invoice snapshots for {Count} earlier synced orders", filled);
+            notifier.NotifyChanged();
+        }
+        return filled;
+    }
+
+    /// <summary>
     /// Manually retries one order (from the dashboard), also after the automatic attempts ran out.
     /// </summary>
     /// <returns>True if the order is now synced.</returns>
@@ -176,15 +206,18 @@ public class OrderInvoicingService(
         return invoice.Id;
     }
 
-    private async Task MarkSyncedAsync(int id, string invoiceId, MockOrder order)
+    private Task MarkSyncedAsync(int id, string invoiceId, MockOrder order) =>
+        SaveSnapshotAsync(id, invoiceId, order, syncedAt: time.GetUtcNow());
+
+    /// <param name="syncedAt">New sync time, or null to keep the stored one (backfill).</param>
+    private async Task SaveSnapshotAsync(int id, string invoiceId, MockOrder order, DateTimeOffset? syncedAt)
     {
-        var now = time.GetUtcNow();
         // Not cancellable: once Moneybird has the invoice we want to record it.
         await using var transaction = await db.Database.BeginTransactionAsync(CancellationToken.None);
         await db.SyncedOrders.Where(o => o.Id == id).ExecuteUpdateAsync(s => s
             .SetProperty(o => o.Status, SyncStatus.Synced)
             .SetProperty(o => o.MoneybirdInvoiceId, invoiceId)
-            .SetProperty(o => o.SyncedAt, now)
+            .SetProperty(o => o.SyncedAt, o => syncedAt ?? o.SyncedAt)
             .SetProperty(o => o.LastError, (string?)null)
             .SetProperty(o => o.CustomerName, order.CustomerName)
             .SetProperty(o => o.InvoiceDate, InvoiceDateFor(order))

@@ -83,6 +83,30 @@ public sealed class OrderInvoicingServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Backfill_adds_snapshot_to_earlier_synced_orders_without_calling_moneybird()
+    {
+        var earlier = Now.AddDays(-1);
+        await AddOrderAsync("WS-1", SyncStatus.Synced);
+        using (var db = new OrderSyncDbContext(dbOptions))
+        {
+            await db.SyncedOrders.ExecuteUpdateAsync(s => s
+                .SetProperty(o => o.MoneybirdInvoiceId, "inv-old")
+                .SetProperty(o => o.SyncedAt, earlier));
+        }
+
+        Assert.Equal(1, await CreateService().BackfillSnapshotsAsync());
+        Assert.Equal(0, await CreateService().BackfillSnapshotsAsync());
+
+        var order = await GetOrderAsync("WS-1");
+        Assert.Equal("Sanne de Vries", order.CustomerName);
+        Assert.Equal(25.00m, order.Total);
+        Assert.Single(order.InvoiceLines);
+        Assert.Equal("inv-old", order.MoneybirdInvoiceId);
+        Assert.Equal(earlier, order.SyncedAt);
+        Assert.Equal(0, moneybird.FindInvoiceCalls);
+    }
+
+    [Fact]
     public async Task Invoice_order_invoices_only_that_order()
     {
         await AddOrderAsync("WS-1");

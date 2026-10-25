@@ -39,6 +39,8 @@ public class OrderSyncWorker(
             scope.ServiceProvider.GetRequiredService<OrderSyncService>().SyncNewOrdersAsync(stoppingToken), stoppingToken);
         await TryAsync("Invoicing orders", () =>
             scope.ServiceProvider.GetRequiredService<OrderInvoicingService>().InvoicePendingOrdersAsync(stoppingToken), stoppingToken);
+        await TryAsync("Adding invoice snapshots", () =>
+            scope.ServiceProvider.GetRequiredService<OrderInvoicingService>().BackfillSnapshotsAsync(stoppingToken), stoppingToken);
     }
 
     private async Task TryAsync(string step, Func<Task> action, CancellationToken stoppingToken)
