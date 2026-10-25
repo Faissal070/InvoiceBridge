@@ -1,0 +1,440 @@
+@page "/demo"
+@page "/dashboard"
+@rendermode InteractiveServer
+@implements IDisposable
+@using System.Diagnostics
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.Extensions.Options
+@using OrderSync.Data
+@using OrderSync.MockShop
+@using OrderSync.Models
+@using OrderSync.Options
+@using OrderSync.Services
+@inject IServiceScopeFactory ScopeFactory
+@inject IOptions<MoneybirdOptions> MoneybirdOptions
+@inject IOptions<DemoOptions> DemoOptions
+@inject OrderChangeNotifier Notifier
+@inject VisitorContext Visitor
+@inject MockOrderStore Shop
+@inject TimeProvider Time
+@inject ILogger<Demo> Logger
+
+<PageTitle>Live demo – OrderSync</PageTitle>
+
+<div class="page-header">
+    <span class="eyebrow"><Icon Name="bolt" Size="14" /> Live demo</span>
+    <h1>Van bestelling naar factuur, live</h1>
+    <p>Plaats een testbestelling in de voorbeeldwebshop en kijk hoe OrderSync er binnen een paar seconden een factuur van maakt.</p>
+</div>
+
+<div class="demo-grid">
+    <section class="card card-body" aria-labelledby="try-title">
+        <h2 id="try-title" class="card-title">Probeer het zelf</h2>
+        <p class="muted mt-xs">Kies wat je wilt zien: een normale bestelling, of een bestelling waarbij de webshop even hapert.</p>
+
+        @if (!MoneybirdOptions.Value.IsConfigured)
+        {
+            <div class="notice notice-info mt-md">
+                <Icon Name="info" />
+                <span>De demo is even niet beschikbaar: er kunnen nu geen facturen worden aangemaakt. Bekijk gerust de facturen hieronder.</span>
+            </div>
+        }
+
+        <div class="try-actions">
+            <button class="btn btn-primary btn-lg" @onclick="() => PlaceOrderAsync(simulateOutage: false)" disabled="@(busy || !MoneybirdOptions.Value.IsConfigured)">
+                <Icon Name="plus" /> Plaats een testbestelling
+            </button>
+            <button class="btn btn-secondary btn-lg" @onclick="() => PlaceOrderAsync(simulateOutage: true)" disabled="@(busy || !MoneybirdOptions.Value.IsConfigured)">
+                <Icon Name="alert" /> Test met een storing
+            </button>
+        </div>
+
+        @if (notice is not null)
+        {
+            <div class="notice notice-@notice.Tone mt-md" role="status">
+                <Icon Name="@(notice.Tone == "success" ? "check-circle" : notice.Tone == "info" ? "info" : "alert")" />
+                <span>@notice.Text</span>
+            </div>
+        }
+
+        <ol class="timeline" aria-live="polite">
+            <li class="timeline-step @StepClass(1)">
+                <span class="timeline-marker">@StepMarker(1)</span>
+                <div class="timeline-text">
+                    <strong>Bestelling komt binnen</strong>
+                    @if (run is not null)
+                    {
+                        <span><span class="mono">@run.Order.OrderId</span> · @run.Order.CustomerName · @Display.Amount(run.Order.Total)</span>
+                    }
+                    else
+                    {
+                        <span>Een fictieve klant bestelt in de webshop.</span>
+                    }
+                </div>
+            </li>
+            <li class="timeline-step @StepClass(2)">
+                <span class="timeline-marker">@StepMarker(2)</span>
+                <div class="timeline-text">
+                    <strong>@(run?.Step == DemoStep.Failed ? "Even niet gelukt" : "OrderSync maakt de factuur")</strong>
+                    @if (run?.Step == DemoStep.Failed)
+                    {
+                        <span>@run.Error OrderSync probeert het vanzelf opnieuw, of je doet het nu zelf.</span>
+                        <div class="actions">
+                            <button class="btn btn-secondary btn-sm" @onclick="() => RetryAsync(run.SyncedOrderId, run.Order.OrderId)" disabled="@busy">
+                                <Icon Name="sync" Size="16" /> Nu opnieuw proberen
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <span>Klant opzoeken in Moneybird en de factuurregels overnemen.</span>
+                    }
+                </div>
+            </li>
+            <li class="timeline-step @StepClass(3)">
+                <span class="timeline-marker">@StepMarker(3)</span>
+                <div class="timeline-text">
+                    <strong>Factuur staat klaar</strong>
+                    @if (run?.Step == DemoStep.Done)
+                    {
+                        <span>@(run.Elapsed is { } elapsed ? $"Gefactureerd in {elapsed.TotalSeconds:0.0} seconden." : "Alsnog gefactureerd.") Zonder iets over te typen.</span>
+                        <div class="actions">
+                            <a class="link-arrow" href="@InvoiceHref(run.Order.OrderId)">Bekijk de factuur <Icon Name="arrow-right" Size="16" /></a>
+                        </div>
+                    }
+                    else
+                    {
+                        <span>Als concept in Moneybird, klaar om te versturen.</span>
+                    }
+                </div>
+            </li>
+        </ol>
+
+        <p class="try-hint">Alle namen en bedragen zijn fictief. Je kunt een paar testbestellingen per @DemoOptions.Value.VisitorWindowMinutes minuten plaatsen.</p>
+    </section>
+
+    <section class="stat-tiles" aria-label="Overzicht">
+        @foreach (var status in TileStatuses)
+        {
+            <div class="card stat-tile">
+                <StatusBadge Status="status" />
+                <span class="stat-value">@counts.GetValueOrDefault(status)</span>
+            </div>
+        }
+        <div class="card stat-tile stat-tile-wide">
+            <span class="icon-badge icon-badge-success"><Icon Name="clock" /></span>
+            <div class="stat">
+                <span class="stat-value">@Display.Duration(counts.GetValueOrDefault(SyncStatus.Synced) * DemoOptions.Value.MinutesSavedPerInvoice)</span>
+                <span class="stat-note">werk bespaard (schatting: @DemoOptions.Value.MinutesSavedPerInvoice min per factuur)</span>
+            </div>
+        </div>
+    </section>
+</div>
+
+<section class="card" aria-labelledby="orders-title">
+    <div class="card-header">
+        <h2 id="orders-title" class="card-title">Recente bestellingen</h2>
+        <span class="live"><span class="live-dot" aria-hidden="true"></span>Live bijgewerkt</span>
+    </div>
+
+    @if (orders is null)
+    {
+        <div class="empty-state"><span class="spinner subtle"></span><p>Bestellingen laden…</p></div>
+    }
+    else if (orders.Count == 0)
+    {
+        <div class="empty-state">
+            <span class="icon-badge"><Icon Name="cart" /></span>
+            <h2>Nog geen bestellingen</h2>
+            <p>Plaats hierboven een testbestelling om te beginnen.</p>
+        </div>
+    }
+    else
+    {
+        <div class="orders-head" aria-hidden="true">
+            <span>Bestelling</span><span>Bedrag</span><span>Status</span><span>Wanneer</span><span></span>
+        </div>
+        <ul class="orders">
+            @foreach (var order in orders.Take(visibleRows))
+            {
+                // Not invoiced yet: the snapshot is empty, so show what the webshop knows.
+                var shopOrder = order.CustomerName is null ? Shop.Find(order.OrderId) : null;
+                <li @key="order.Id" class="order-row @(changedIds.Contains(order.Id) ? "is-new" : null)">
+                    <div class="order-main">
+                        <div class="order-id mono">@order.OrderId</div>
+                        <div class="order-customer">@(order.CustomerName ?? shopOrder?.CustomerName ?? "Nog niet verwerkt")</div>
+                    </div>
+                    <div class="order-amount">@Display.Amount(order.Total ?? shopOrder?.Total)</div>
+                    <div class="order-status"><StatusBadge Status="order.Status" /></div>
+                    <div class="order-time">@Display.Relative(order.SyncedAt ?? order.LastAttemptAt ?? order.CreatedAt, Time.GetUtcNow())</div>
+                    <div class="order-action">@if (order.Status == SyncStatus.Synced)
+                        {
+                            <a class="link-arrow" href="@InvoiceHref(order.OrderId)">Factuur <Icon Name="arrow-right" Size="16" /></a>
+                            @if (DemoOptions.Value.ShowMoneybirdLinks && order.MoneybirdInvoiceId is not null)
+                            {
+                                <a class="link-arrow subtle" href="@MoneybirdUrl(order.MoneybirdInvoiceId)" target="_blank" rel="noopener">Moneybird <Icon Name="external" Size="14" /></a>
+                            }
+                        }
+                        else if (order.Status == SyncStatus.Failed)
+                        {
+                            <button class="btn btn-secondary btn-sm" @onclick="() => RetryAsync(order.Id, order.OrderId)" disabled="@busy">
+                                <Icon Name="sync" Size="16" /> Opnieuw proberen
+                            </button>
+                        }</div>
+                    @if (order.Status == SyncStatus.Failed)
+                    {
+                        <div class="order-error">
+                            <Icon Name="alert" Size="16" />
+                            <span>
+                                @order.LastError
+                                @(order.Attempts < OrderInvoicingService.MaxAutomaticAttempts
+                                    ? $"OrderSync probeert het automatisch opnieuw (poging {order.Attempts} van {OrderInvoicingService.MaxAutomaticAttempts})."
+                                    : "Automatisch opnieuw proberen is gestopt; probeer het handmatig.")
+                            </span>
+                        </div>
+                    }
+                </li>
+            }
+        </ul>
+        @if (orders.Count > visibleRows)
+        {
+            <div class="orders-more">
+                <button class="btn btn-ghost btn-sm" @onclick="() => visibleRows = MaxRows">Toon meer bestellingen</button>
+            </div>
+        }
+    }
+</section>
+
+@code {
+    private const int MaxRows = 50;
+    private int visibleRows = 10;
+    private static readonly TimeSpan AutoRefreshInterval = TimeSpan.FromSeconds(15);
+    // Short pause so viewers can see the order arrive before it is invoiced.
+    private static readonly TimeSpan StepPause = TimeSpan.FromMilliseconds(700);
+    private static readonly SyncStatus[] TileStatuses = [SyncStatus.Synced, SyncStatus.Failed, SyncStatus.Processing, SyncStatus.Pending];
+
+    private enum DemoStep { Invoicing, Done, Failed }
+
+    private sealed class DemoRun(int syncedOrderId, MockOrder order)
+    {
+        public int SyncedOrderId { get; } = syncedOrderId;
+        public MockOrder Order { get; } = order;
+        public DemoStep Step { get; set; } = DemoStep.Invoicing;
+        public string? Error { get; set; }
+        public TimeSpan? Elapsed { get; set; }
+    }
+
+    private sealed record Notice(string Text, string Tone);
+
+    private List<SyncedOrder>? orders;
+    private Dictionary<SyncStatus, int> counts = [];
+    private readonly Dictionary<int, SyncStatus> seenStatuses = [];
+    private HashSet<int> changedIds = [];
+    private DemoRun? run;
+    private Notice? notice;
+    private bool busy;
+    private Timer? refreshTimer;
+    private int refreshQueued;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+        Notifier.Changed += OnOrdersChanged;
+        // Fallback in case a change notification is missed; also keeps "x min geleden" current.
+        refreshTimer = new Timer(_ => OnOrdersChanged(), null, AutoRefreshInterval, AutoRefreshInterval);
+    }
+
+    public void Dispose()
+    {
+        Notifier.Changed -= OnOrdersChanged;
+        refreshTimer?.Dispose();
+    }
+
+    /// <summary>Reloads once for a burst of changes; called from other threads.</summary>
+    private void OnOrdersChanged()
+    {
+        if (Interlocked.Exchange(ref refreshQueued, 1) == 1)
+        {
+            return;
+        }
+
+        _ = InvokeAsync(async () =>
+        {
+            Volatile.Write(ref refreshQueued, 0);
+            try
+            {
+                await LoadAsync();
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Refreshing the demo page failed");
+            }
+        });
+    }
+
+    private async Task LoadAsync()
+    {
+        using var scope = ScopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<OrderSyncDbContext>();
+        var latest = await db.SyncedOrders
+            .AsNoTracking()
+            .OrderByDescending(o => o.CreatedAt)
+            .ThenByDescending(o => o.OrderId)
+            .Take(MaxRows)
+            .ToListAsync();
+        counts = await db.SyncedOrders
+            .GroupBy(o => o.Status)
+            .Select(g => new { g.Key, Count = g.Count() })
+            .ToDictionaryAsync(g => g.Key, g => g.Count);
+
+        // Highlight rows that are new or changed status since the previous load (not on the first load).
+        changedIds = orders is null
+            ? []
+            : latest.Where(o => !seenStatuses.TryGetValue(o.Id, out var s) || s != o.Status).Select(o => o.Id).ToHashSet();
+        foreach (var o in latest)
+        {
+            seenStatuses[o.Id] = o.Status;
+        }
+        orders = latest;
+
+        UpdateRunFromOrders();
+    }
+
+    /// <summary>The worker or a retry may finish the current demo order; reflect that in the timeline.</summary>
+    private void UpdateRunFromOrders()
+    {
+        if (run is null || orders?.FirstOrDefault(o => o.Id == run.SyncedOrderId) is not { } order)
+        {
+            return;
+        }
+
+        switch (order.Status)
+        {
+            case SyncStatus.Synced when run.Step != DemoStep.Done:
+                run.Step = DemoStep.Done;
+                break;
+            case SyncStatus.Failed:
+                run.Step = DemoStep.Failed;
+                run.Error = order.LastError;
+                break;
+            case SyncStatus.Pending or SyncStatus.Processing when run.Step == DemoStep.Failed:
+                run.Step = DemoStep.Invoicing;
+                break;
+        }
+    }
+
+    private async Task PlaceOrderAsync(bool simulateOutage)
+    {
+        if (busy)
+        {
+            return;
+        }
+
+        busy = true;
+        notice = null;
+        try
+        {
+            using var scope = ScopeFactory.CreateScope();
+            var placed = await scope.ServiceProvider.GetRequiredService<DemoOrderService>()
+                .PlaceOrderAsync(Visitor.VisitorId, simulateOutage);
+            if (!placed.Accepted)
+            {
+                notice = new Notice(placed.RefusedReason!, "warning");
+                return;
+            }
+
+            run = new DemoRun(placed.SyncedOrderId!.Value, placed.Order!);
+            await LoadAsync();
+            StateHasChanged();
+            await Task.Delay(StepPause);
+
+            var stopwatch = Stopwatch.StartNew();
+            await scope.ServiceProvider.GetRequiredService<OrderInvoicingService>().InvoiceOrderAsync(run.SyncedOrderId);
+            run.Elapsed = stopwatch.Elapsed;
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Placing a demo order failed");
+            notice = new Notice("Er ging iets mis bij het plaatsen van de bestelling. Probeer het zo nog eens.", "danger");
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private async Task RetryAsync(int syncedOrderId, string orderId)
+    {
+        if (busy)
+        {
+            return;
+        }
+
+        busy = true;
+        notice = null;
+        try
+        {
+            using var scope = ScopeFactory.CreateScope();
+            var result = await scope.ServiceProvider.GetRequiredService<DemoOrderService>().RetryAsync(Visitor.VisitorId, syncedOrderId);
+            if (run?.SyncedOrderId == syncedOrderId)
+            {
+                run.Elapsed = null;
+            }
+            await LoadAsync();
+
+            // The timeline already tells the story for the current demo order.
+            if (run?.SyncedOrderId != syncedOrderId || !result.Attempted)
+            {
+                notice = result switch
+                {
+                    { Attempted: false } => new Notice(result.RefusedReason!, "info"),
+                    { Synced: true } => new Notice($"Bestelling {orderId} is alsnog gefactureerd.", "success"),
+                    _ => new Notice($"Bestelling {orderId} is opnieuw niet gelukt. De reden staat bij de bestelling.", "danger")
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Retrying order {OrderId} failed", orderId);
+            notice = new Notice("Opnieuw proberen lukte niet. Probeer het zo nog eens.", "danger");
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private string StepClass(int step) => StepState(step) switch
+    {
+        "done" => "is-done",
+        "active" => "is-active",
+        "failed" => "is-failed",
+        _ => "is-pending"
+    };
+
+    private RenderFragment StepMarker(int step) => StepState(step) switch
+    {
+        "done" => @<Icon Name="check" Size="16" />,
+        "active" => @<span class="spinner"></span>,
+        "failed" => @<Icon Name="alert" Size="15" />,
+        _ => @<span>@step</span>
+    };
+
+    private string StepState(int step) => (step, run?.Step) switch
+    {
+        (_, null) => "pending",
+        (1, _) => "done",
+        (2, DemoStep.Invoicing) => "active",
+        (2, DemoStep.Failed) => "failed",
+        (2, DemoStep.Done) => "done",
+        (3, DemoStep.Done) => "done",
+        _ => "pending"
+    };
+
+    private static string InvoiceHref(string orderId) => $"facturen/{Uri.EscapeDataString(orderId)}";
+
+    private string MoneybirdUrl(string invoiceId) =>
+        $"https://moneybird.com/{Uri.EscapeDataString(MoneybirdOptions.Value.AdministrationId ?? "")}/sales_invoices/{Uri.EscapeDataString(invoiceId)}";
+}

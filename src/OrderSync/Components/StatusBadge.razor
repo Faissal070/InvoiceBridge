@@ -1,0 +1,9 @@
+@using OrderSync.Models
+
+<span class="pill pill-@Display.Tone(Status)">
+    <span class="pill-dot" aria-hidden="true"></span>@Display.Label(Status)
+</span>
+
+@code {
+    [Parameter, EditorRequired] public SyncStatus Status { get; set; }
+}

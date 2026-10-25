@@ -1,0 +1,162 @@
+@page "/facturen/{OrderId}"
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.Extensions.Options
+@using OrderSync.Data
+@using OrderSync.MockShop
+@using OrderSync.Models
+@using OrderSync.Options
+@inject OrderSyncDbContext Db
+@inject MockOrderStore Shop
+@inject IOptions<DemoOptions> DemoOptions
+@inject IOptions<MoneybirdOptions> MoneybirdOptions
+
+<PageTitle>Factuur @OrderId – OrderSync</PageTitle>
+
+<div class="invoice-page">
+    <div class="invoice-toolbar">
+        <a class="btn btn-ghost btn-sm" href="demo"><Icon Name="arrow-left" Size="16" /> Terug naar de live demo</a>
+        @if (order?.MoneybirdInvoiceId is not null && DemoOptions.Value.ShowMoneybirdLinks)
+        {
+            <a class="btn btn-secondary btn-sm" href="@MoneybirdUrl(order.MoneybirdInvoiceId)" target="_blank" rel="noopener">
+                Open in Moneybird <Icon Name="external" Size="15" />
+            </a>
+        }
+    </div>
+
+    @if (order is null)
+    {
+        <div class="card empty-state">
+            <span class="icon-badge"><Icon Name="invoice" /></span>
+            <h1>Factuur niet gevonden</h1>
+            <p>Er is geen bestelling met nummer <span class="mono">@OrderId</span>. Misschien is de link niet helemaal goed.</p>
+            <a class="btn btn-primary" href="demo">Naar de live demo</a>
+        </div>
+    }
+    else if (order.Status != SyncStatus.Synced)
+    {
+        <div class="card empty-state">
+            <span class="icon-badge icon-badge-warning"><Icon Name="clock" /></span>
+            <h1>Nog geen factuur</h1>
+            <p>Bestelling <span class="mono">@order.OrderId</span> is nog niet gefactureerd.</p>
+            <StatusBadge Status="order.Status" />
+            @if (order.LastError is not null && order.Status == SyncStatus.Failed)
+            {
+                <p>@order.LastError</p>
+            }
+            <a class="btn btn-primary" href="demo">Naar de live demo</a>
+        </div>
+    }
+    else if (lines.Count == 0)
+    {
+        <div class="card empty-state">
+            <span class="icon-badge"><Icon Name="invoice" /></span>
+            <h1>Factuurgegevens worden opgehaald</h1>
+            <p>Deze factuur staat in Moneybird, maar de details zijn hier nog niet bekend. Probeer het over een paar minuten opnieuw.</p>
+        </div>
+    }
+    else
+    {
+        <div class="notice notice-success">
+            <Icon Name="check-circle" />
+            <span>Deze factuur is automatisch door OrderSync in Moneybird aangemaakt op @Display.DateAndTime(order.SyncedAt). Zo ziet de klant hem straks.</span>
+        </div>
+
+        <article class="card invoice-paper" aria-label="Factuur">
+            <header class="invoice-top">
+                <div class="invoice-company">
+                    <strong>Koffiehuis De Demo</strong>
+                    <p>Voorbeeldstraat 1, 1234 AB Demostad<br />Fictief demobedrijf</p>
+                </div>
+                <div class="invoice-title">
+                    <h1>Conceptfactuur</h1>
+                    <StatusBadge Status="order.Status" />
+                    <dl class="invoice-meta">
+                        <dt>Referentie</dt><dd class="mono">@order.OrderId</dd>
+                        <dt>Factuurdatum</dt><dd>@Display.Date(invoiceDate)</dd>
+                    </dl>
+                </div>
+            </header>
+
+            <div class="invoice-to">
+                <span>Factuur aan</span>
+                <strong>@customerName</strong>
+            </div>
+
+            <table class="invoice-lines">
+                <thead>
+                    <tr>
+                        <th>Omschrijving</th>
+                        <th class="num col-qty">Aantal</th>
+                        <th class="num col-price">Prijs</th>
+                        <th class="num">Bedrag</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var line in lines)
+                    {
+                        <tr>
+                            <td>
+                                @line.Description
+                                <span class="line-detail">@line.Quantity × @Display.Amount(line.UnitPrice)</span>
+                            </td>
+                            <td class="num col-qty">@line.Quantity</td>
+                            <td class="num col-price">@Display.Amount(line.UnitPrice)</td>
+                            <td class="num">@Display.Amount(line.LineTotal)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <div class="invoice-total">
+                <dl>
+                    <dt class="grand">Totaal</dt>
+                    <dd class="grand">@Display.Amount(lines.Sum(l => l.LineTotal))</dd>
+                </dl>
+            </div>
+            <p class="invoice-vat">Bedragen zijn inclusief btw.</p>
+
+            <footer class="invoice-footnote">
+                <Icon Name="info" Size="16" />
+                <span>Dit is een voorbeeld met fictieve gegevens. In Moneybird staat de factuur als concept, zodat jij bepaalt wanneer hij verstuurd wordt.</span>
+            </footer>
+        </article>
+    }
+</div>
+
+@code {
+    [Parameter] public string OrderId { get; set; } = "";
+
+    private SyncedOrder? order;
+    private List<InvoiceLine> lines = [];
+    private string? customerName;
+    private DateOnly? invoiceDate;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        order = await Db.SyncedOrders
+            .AsNoTracking()
+            .Include(o => o.InvoiceLines)
+            .SingleOrDefaultAsync(o => o.OrderId == OrderId);
+        if (order is null)
+        {
+            return;
+        }
+
+        lines = order.InvoiceLines.OrderBy(l => l.Id).ToList();
+        customerName = order.CustomerName;
+        invoiceDate = order.InvoiceDate;
+
+        // Orders invoiced before snapshots existed: show the webshop order until the worker fills in the snapshot.
+        if (lines.Count == 0 && Shop.Find(order.OrderId) is { } shopOrder)
+        {
+            lines = shopOrder.Lines
+                .Select(l => new InvoiceLine { Description = l.Product, Quantity = l.Quantity, UnitPrice = l.UnitPrice })
+                .ToList();
+            customerName = shopOrder.CustomerName;
+            invoiceDate = DateOnly.FromDateTime(shopOrder.OrderDate.Date);
+        }
+    }
+
+    private string MoneybirdUrl(string invoiceId) =>
+        $"https://moneybird.com/{Uri.EscapeDataString(MoneybirdOptions.Value.AdministrationId ?? "")}/sales_invoices/{Uri.EscapeDataString(invoiceId)}";
+}
