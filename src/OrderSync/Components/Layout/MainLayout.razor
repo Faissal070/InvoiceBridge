@@ -1,23 +1,32 @@
 ﻿@inherits LayoutComponentBase
 
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
+<a class="skip-link" href="#main">Naar de inhoud</a>
+
+<header class="topbar">
+    <div class="container topbar-inner">
+        <a class="brand" href="">
+            <span class="brand-mark" aria-hidden="true"><Icon Name="sync" Size="16" /></span>
+            OrderSync
+        </a>
+        <nav class="topnav" aria-label="Hoofdmenu">
+            <NavLink href="" Match="NavLinkMatch.All">Hoe het werkt</NavLink>
+            <NavLink href="demo" class="topnav-cta">Live demo</NavLink>
+        </nav>
     </div>
+</header>
 
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-        </div>
+<main id="main" class="container page">
+    @Body
+</main>
 
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
-</div>
+<footer class="footer">
+    <div class="container footer-inner">
+        <span>Demo met fictieve gegevens. Facturen zijn concepten in een testadministratie.</span>
+        <span>OrderSync</span>
+    </div>
+</footer>
 
 <div id="blazor-error-ui" data-nosnippet>
-    An unhandled error has occurred.
-    <a href="." class="reload">Reload</a>
-    <span class="dismiss">🗙</span>
+    Er ging iets mis. <a href="." class="reload">Pagina opnieuw laden</a>
+    <button class="dismiss" type="button" aria-label="Sluiten">×</button>
 </div>
