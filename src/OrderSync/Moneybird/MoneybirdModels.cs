@@ -1,6 +1,6 @@
 namespace OrderSync.Moneybird;
 
-public record MoneybirdContact(string Id, string? Email, string? SendInvoicesToEmail);
+public record MoneybirdContact(string Id, string? CustomerId);
 
 public record MoneybirdInvoice(string Id, string? Reference);
 

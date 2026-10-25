@@ -16,15 +16,25 @@ public class MoneybirdClientTests
     [Fact]
     public async Task Requests_use_administration_url_and_bearer_token()
     {
-        handler.Respond(HttpStatusCode.OK, "[]");
+        handler.Respond(HttpStatusCode.OK, """{"id":"1","customer_id":"x"}""");
 
         await CreateClient().FindContactByEmailAsync("sanne@example.nl");
 
         var request = Assert.Single(handler.Requests);
         Assert.Equal(HttpMethod.Get, request.Method);
-        Assert.Equal($"https://moneybird.test/api/v2/{AdministrationId}/contacts.json", request.Uri.GetLeftPart(UriPartial.Path));
-        Assert.Equal("query=sanne%40example.nl", request.Uri.Query.TrimStart('?'));
+        var customerId = MoneybirdClient.CustomerIdFor("sanne@example.nl");
+        Assert.Equal($"https://moneybird.test/api/v2/{AdministrationId}/contacts/customer_id/{customerId}.json", request.Uri.ToString());
         Assert.Equal($"Bearer {Token}", request.Authorization);
+    }
+
+    [Fact]
+    public void CustomerId_is_stable_case_insensitive_and_url_safe()
+    {
+        var id = MoneybirdClient.CustomerIdFor("Sanne.DeVries@Example.nl ");
+
+        Assert.Equal(id, MoneybirdClient.CustomerIdFor("sanne.devries@example.nl"));
+        Assert.NotEqual(id, MoneybirdClient.CustomerIdFor("daan.jansen@example.nl"));
+        Assert.Matches("^mockshop-[0-9a-f]{16}$", id);
     }
 
     [Fact]
@@ -49,33 +59,30 @@ public class MoneybirdClientTests
     }
 
     [Fact]
-    public async Task FindContactByEmail_only_accepts_exact_email_match()
+    public async Task FindContactByEmail_returns_null_when_customer_id_unknown()
     {
-        handler.Respond(HttpStatusCode.OK, """
-            [
-              {"id":"1","email":"sanne.devries@example.nl.old","send_invoices_to_email":null},
-              {"id":"2","email":null,"send_invoices_to_email":"boekhouding@example.nl, SANNE@example.nl"}
-            ]
-            """);
+        handler.Respond(HttpStatusCode.NotFound, """{"error":"record not found"}""");
 
-        var contact = await CreateClient().FindContactByEmailAsync("sanne@example.nl");
-
-        Assert.Equal("2", contact?.Id);
+        Assert.Null(await CreateClient().FindContactByEmailAsync("sanne@example.nl"));
     }
 
     [Fact]
-    public async Task CreateContact_posts_name_email_and_manual_delivery()
+    public async Task CreateContact_posts_name_customer_id_and_manual_delivery_without_email()
     {
-        handler.Respond(HttpStatusCode.Created, """{"id":"77","email":null,"send_invoices_to_email":"sanne@example.nl"}""");
+        var customerId = MoneybirdClient.CustomerIdFor("sanne@example.nl");
+        handler.Respond(HttpStatusCode.Created, $$"""{"id":"77","customer_id":"{{customerId}}"}""");
 
         var contact = await CreateClient().CreateContactAsync(new NewMoneybirdContact("Sanne", "de Vries", "sanne@example.nl"));
 
-        Assert.Equal("77", contact.Id);
+        Assert.Equal(new MoneybirdContact("77", customerId), contact);
         var body = handler.Requests.Single().Json!.Value.GetProperty("contact");
         Assert.Equal("Sanne", body.GetProperty("firstname").GetString());
         Assert.Equal("de Vries", body.GetProperty("lastname").GetString());
-        Assert.Equal("sanne@example.nl", body.GetProperty("send_invoices_to_email").GetString());
+        Assert.Equal(customerId, body.GetProperty("customer_id").GetString());
         Assert.Equal("Manual", body.GetProperty("delivery_method").GetString());
+        // Moneybird rejects the fake demo e-mail domains, so no e-mail fields are sent.
+        Assert.False(body.TryGetProperty("email", out _));
+        Assert.False(body.TryGetProperty("send_invoices_to_email", out _));
     }
 
     [Fact]

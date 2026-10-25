@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Options;
@@ -40,25 +42,24 @@ public class MoneybirdClient(HttpClient http, IOptions<MoneybirdOptions> options
 
     public async Task<MoneybirdContact?> FindContactByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
-        var contacts = await SendAsync<List<ContactDto>>(
-            HttpMethod.Get, $"contacts.json?query={Uri.EscapeDataString(email)}", null, cancellationToken);
-
-        // query is a free-text search; only accept an exact e-mail match.
-        return contacts?
-            .Where(c => EmailMatches(c.Email, email) || EmailMatches(c.SendInvoicesToEmail, email))
-            .Select(ToContact)
-            .FirstOrDefault();
+        // The free-text contact search is not reliable right after creation, so contacts are
+        // looked up by a customer_id derived from the e-mail address instead.
+        var path = $"contacts/customer_id/{CustomerIdFor(email)}.json";
+        var contact = await SendAsync<ContactDto>(HttpMethod.Get, path, null, cancellationToken, notFoundIsNull: true);
+        return contact is null ? null : ToContact(contact);
     }
 
     public async Task<MoneybirdContact> CreateContactAsync(NewMoneybirdContact contact, CancellationToken cancellationToken = default)
     {
+        // The e-mail address itself is not sent: Moneybird rejects the fake demo domains,
+        // and invoices are never e-mailed anyway (delivery_method Manual).
         var body = new
         {
             contact = new
             {
                 firstname = contact.FirstName,
                 lastname = contact.LastName,
-                send_invoices_to_email = contact.Email,
+                customer_id = CustomerIdFor(contact.Email),
                 delivery_method = "Manual"
             }
         };
@@ -91,7 +92,18 @@ public class MoneybirdClient(HttpClient http, IOptions<MoneybirdOptions> options
         return new MoneybirdInvoice(created.Id, created.Reference);
     }
 
-    private async Task<T?> SendAsync<T>(HttpMethod method, string path, object? body, CancellationToken cancellationToken)
+    /// <summary>
+    /// Stable, URL-safe customer id for an e-mail address. Dots are avoided because Moneybird
+    /// reads them as a format extension in the customer_id lookup URL.
+    /// </summary>
+    public static string CustomerIdFor(string email)
+    {
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(email.Trim().ToLowerInvariant()));
+        return "mockshop-" + Convert.ToHexStringLower(hash)[..16];
+    }
+
+    private async Task<T?> SendAsync<T>(HttpMethod method, string path, object? body, CancellationToken cancellationToken,
+        bool notFoundIsNull = false)
     {
         if (!settings.IsConfigured)
         {
@@ -122,6 +134,11 @@ public class MoneybirdClient(HttpClient http, IOptions<MoneybirdOptions> options
 
         using (response)
         {
+            if (notFoundIsNull && response.StatusCode == HttpStatusCode.NotFound)
+            {
+                return default;
+            }
+
             if (!response.IsSuccessStatusCode)
             {
                 throw await ToExceptionAsync(response, cancellationToken);
@@ -162,13 +179,9 @@ public class MoneybirdClient(HttpClient http, IOptions<MoneybirdOptions> options
         return text.Length <= MaxErrorBodyLength ? text : text[..MaxErrorBodyLength] + "…";
     }
 
-    private static bool EmailMatches(string? value, string email) =>
-        value is not null && value.Split(',', StringSplitOptions.TrimEntries)
-            .Any(v => string.Equals(v, email, StringComparison.OrdinalIgnoreCase));
+    private static MoneybirdContact ToContact(ContactDto c) => new(c.Id, c.CustomerId);
 
-    private static MoneybirdContact ToContact(ContactDto c) => new(c.Id, c.Email, c.SendInvoicesToEmail);
-
-    private sealed record ContactDto(string Id, string? Email, string? SendInvoicesToEmail);
+    private sealed record ContactDto(string Id, string? CustomerId);
 
     private sealed record InvoiceDto(string Id, string? Reference);
 }

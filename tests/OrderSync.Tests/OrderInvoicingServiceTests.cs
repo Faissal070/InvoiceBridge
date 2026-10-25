@@ -66,7 +66,7 @@ public sealed class OrderInvoicingServiceTests : IDisposable
     public async Task Existing_contact_is_reused()
     {
         await AddOrderAsync("WS-1");
-        moneybird.Contacts.Add(new MoneybirdContact("c-existing", "klant-WS-1@example.nl", null));
+        moneybird.Contacts.Add(new MoneybirdContact("c-existing", MoneybirdClient.CustomerIdFor("klant-WS-1@example.nl")));
 
         await RunAsync();
 
@@ -331,12 +331,12 @@ public sealed class OrderInvoicingServiceTests : IDisposable
         }
 
         public Task<MoneybirdContact?> FindContactByEmailAsync(string email, CancellationToken cancellationToken = default) =>
-            Task.FromResult(Contacts.FirstOrDefault(c => c.Email == email));
+            Task.FromResult(Contacts.FirstOrDefault(c => c.CustomerId == MoneybirdClient.CustomerIdFor(email)));
 
         public Task<MoneybirdContact> CreateContactAsync(NewMoneybirdContact contact, CancellationToken cancellationToken = default)
         {
             CreatedContacts.Add(contact);
-            var created = new MoneybirdContact($"c-{CreatedContacts.Count}", contact.Email, contact.Email);
+            var created = new MoneybirdContact($"c-{CreatedContacts.Count}", MoneybirdClient.CustomerIdFor(contact.Email));
             Contacts.Add(created);
             return Task.FromResult(created);
         }
