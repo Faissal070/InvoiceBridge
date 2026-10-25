@@ -4,8 +4,9 @@
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.Extensions.Options
 @using OrderSync.Data
-@using OrderSync.Moneybird
-@using OrderSync.Sync
+@using OrderSync.Models
+@using OrderSync.Options
+@using OrderSync.Services
 @inject IServiceScopeFactory ScopeFactory
 @inject IOptions<MoneybirdOptions> MoneybirdOptions
 @inject ILogger<Dashboard> Logger

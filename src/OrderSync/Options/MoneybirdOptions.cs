@@ -1,4 +1,4 @@
-namespace OrderSync.Moneybird;
+namespace OrderSync.Options;
 
 /// <summary>
 /// Moneybird settings. Token and AdministrationId come from user-secrets, never from appsettings.

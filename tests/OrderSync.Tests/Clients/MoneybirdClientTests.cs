@@ -2,9 +2,12 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
-using OrderSync.Moneybird;
+using OrderSync.Clients;
+using OrderSync.Exceptions;
+using OrderSync.Models;
+using OrderSync.Options;
 
-namespace OrderSync.Tests;
+namespace OrderSync.Tests.Clients;
 
 public class MoneybirdClientTests
 {
@@ -155,7 +158,7 @@ public class MoneybirdClientTests
     [Fact]
     public async Task Unconfigured_client_throws_and_sends_nothing()
     {
-        var client = new MoneybirdClient(new HttpClient(handler), Options.Create(new MoneybirdOptions()));
+        var client = new MoneybirdClient(new HttpClient(handler), Microsoft.Extensions.Options.Options.Create(new MoneybirdOptions()));
 
         Assert.False(client.IsConfigured);
         await Assert.ThrowsAsync<MoneybirdException>(() => client.FindInvoiceByReferenceAsync("WS-1"));
@@ -163,7 +166,7 @@ public class MoneybirdClientTests
     }
 
     private MoneybirdClient CreateClient(string? taxRateId = null) =>
-        new(new HttpClient(handler), Options.Create(new MoneybirdOptions
+        new(new HttpClient(handler), Microsoft.Extensions.Options.Options.Create(new MoneybirdOptions
         {
             BaseUrl = "https://moneybird.test/api/v2",
             Token = Token,

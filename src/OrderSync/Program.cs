@@ -1,9 +1,11 @@
 using Microsoft.EntityFrameworkCore;
+using OrderSync.Clients;
 using OrderSync.Components;
 using OrderSync.Data;
 using OrderSync.MockShop;
-using OrderSync.Moneybird;
-using OrderSync.Sync;
+using OrderSync.Options;
+using OrderSync.Services;
+using OrderSync.Workers;
 
 var builder = WebApplication.CreateBuilder(args);
 

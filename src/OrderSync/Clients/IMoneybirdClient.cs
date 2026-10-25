@@ -1,4 +1,6 @@
-namespace OrderSync.Moneybird;
+using OrderSync.Models;
+
+namespace OrderSync.Clients;
 
 public interface IMoneybirdClient
 {

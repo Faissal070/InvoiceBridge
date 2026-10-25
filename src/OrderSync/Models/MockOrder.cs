@@ -1,9 +1,4 @@
-namespace OrderSync.MockShop;
-
-public record MockOrderLine(string Product, int Quantity, decimal UnitPrice)
-{
-    public decimal LineTotal => Quantity * UnitPrice;
-}
+namespace OrderSync.Models;
 
 public record MockOrder(
     string OrderId,

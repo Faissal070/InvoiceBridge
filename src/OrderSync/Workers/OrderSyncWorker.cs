@@ -1,4 +1,6 @@
-namespace OrderSync.Sync;
+using OrderSync.Services;
+
+namespace OrderSync.Workers;
 
 /// <summary>
 /// Periodically polls the webshop for new orders.

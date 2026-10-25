@@ -3,11 +3,12 @@ using System.Net.Http.Json;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
+using OrderSync.Clients;
 using OrderSync.Data;
-using OrderSync.MockShop;
-using OrderSync.Sync;
+using OrderSync.Models;
+using OrderSync.Services;
 
-namespace OrderSync.Tests;
+namespace OrderSync.Tests.Services;
 
 public sealed class OrderSyncServiceTests : IDisposable
 {

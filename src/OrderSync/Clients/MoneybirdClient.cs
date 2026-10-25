@@ -6,8 +6,11 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Options;
+using OrderSync.Exceptions;
+using OrderSync.Models;
+using OrderSync.Options;
 
-namespace OrderSync.Moneybird;
+namespace OrderSync.Clients;
 
 /// <summary>
 /// Typed HTTP client for the Moneybird v2 API. Invoices are created as drafts and never sent.

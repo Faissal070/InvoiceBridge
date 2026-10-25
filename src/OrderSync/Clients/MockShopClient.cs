@@ -1,6 +1,6 @@
-using OrderSync.MockShop;
+using OrderSync.Models;
 
-namespace OrderSync.Sync;
+namespace OrderSync.Clients;
 
 /// <summary>
 /// Typed HTTP client for the (mock) webshop orders API.

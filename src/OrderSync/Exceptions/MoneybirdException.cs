@@ -1,6 +1,6 @@
 using System.Net;
 
-namespace OrderSync.Moneybird;
+namespace OrderSync.Exceptions;
 
 /// <summary>
 /// A Moneybird API error with a message that is safe to show on the dashboard.
