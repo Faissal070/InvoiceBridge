@@ -1,5 +1,3 @@
-using OrderSync.Models;
-
 namespace OrderSync.MockShop;
 
 /// <summary>
@@ -11,15 +9,18 @@ public static class MockShopEndpoints
     {
         var orders = app.MapGroup("/mockshop/orders").WithTags("MockShop");
 
-        orders.MapGet("/", (DateTimeOffset? since) =>
-            MockOrderSeed.Orders
-                .Where(o => since is null || o.OrderDate > since)
-                .OrderBy(o => o.OrderDate));
+        orders.MapGet("/", (DateTimeOffset? since, MockOrderStore store) =>
+            store.GetAll().Where(o => since is null || o.OrderDate > since));
 
-        orders.MapGet("/{orderId}", (string orderId) =>
-            MockOrderSeed.Orders.FirstOrDefault(o => o.OrderId == orderId) is { } order
-                ? Results.Ok(order)
-                : Results.NotFound());
+        orders.MapGet("/{orderId}", (string orderId, MockOrderStore store) =>
+        {
+            if (store.TryConsumeOutage(orderId))
+            {
+                return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
+            }
+
+            return store.Find(orderId) is { } order ? Results.Ok(order) : Results.NotFound();
+        });
 
         return app;
     }

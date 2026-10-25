@@ -16,6 +16,7 @@ builder.Services.AddRazorComponents()
 builder.Services.AddDbContext<OrderSyncDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("OrderSync")));
 
+builder.Services.AddSingleton<MockOrderStore>();
 builder.Services.AddHttpClient<MockShopClient>(client =>
     client.BaseAddress = new Uri(builder.Configuration["MockShop:BaseUrl"] ?? "http://localhost:5168/"));
 builder.Services.AddScoped<OrderSyncService>();
