@@ -1,4 +1,6 @@
+using Microsoft.EntityFrameworkCore;
 using OrderSync.Components;
+using OrderSync.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -6,7 +8,15 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+builder.Services.AddDbContext<OrderSyncDbContext>(options =>
+    options.UseSqlite(builder.Configuration.GetConnectionString("OrderSync")));
+
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    scope.ServiceProvider.GetRequiredService<OrderSyncDbContext>().Database.Migrate();
+}
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
