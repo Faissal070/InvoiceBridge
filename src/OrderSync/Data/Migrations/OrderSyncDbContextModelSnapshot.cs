@@ -28,6 +28,9 @@ namespace OrderSync.Data.Migrations
                     b.Property<long>("CreatedAt")
                         .HasColumnType("INTEGER");
 
+                    b.Property<long?>("LastAttemptAt")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("LastError")
                         .HasColumnType("TEXT");
 

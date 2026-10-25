@@ -21,6 +21,8 @@ builder.Services.AddScoped<OrderSyncService>();
 builder.Services.Configure<MoneybirdOptions>(builder.Configuration.GetSection(MoneybirdOptions.SectionName));
 builder.Services.AddHttpClient<IMoneybirdClient, MoneybirdClient>(client =>
     client.Timeout = TimeSpan.FromSeconds(30));
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddScoped<OrderInvoicingService>();
 builder.Services.AddHostedService<OrderSyncWorker>();
 
 var app = builder.Build();
