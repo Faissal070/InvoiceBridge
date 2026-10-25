@@ -53,6 +53,50 @@ public sealed class OrderInvoicingServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Synced_order_keeps_a_snapshot_of_the_invoice()
+    {
+        await AddOrderAsync("WS-1", customer: "Levi van Leeuwen",
+            lines: [new MockOrderLine("Koffiebonen", 2, 12.50m), new MockOrderLine("Theemok", 1, 9.95m)]);
+
+        await RunAsync();
+
+        var order = await GetOrderAsync("WS-1");
+        Assert.Equal("Levi van Leeuwen", order.CustomerName);
+        Assert.Equal(new DateOnly(2026, 10, 1), order.InvoiceDate);
+        Assert.Equal(34.95m, order.Total);
+        Assert.Equal(
+            [("Koffiebonen", 2, 12.50m), ("Theemok", 1, 9.95m)],
+            order.InvoiceLines.OrderBy(l => l.Id).Select(l => (l.Description, l.Quantity, l.UnitPrice)));
+    }
+
+    [Fact]
+    public async Task Adopted_invoice_also_gets_a_snapshot()
+    {
+        await AddOrderAsync("WS-1");
+        moneybird.Invoices.Add(new MoneybirdInvoice("inv-earlier", "WS-1"));
+
+        await RunAsync();
+
+        var order = await GetOrderAsync("WS-1");
+        Assert.Equal(25.00m, order.Total);
+        Assert.Single(order.InvoiceLines);
+    }
+
+    [Fact]
+    public async Task Invoice_order_invoices_only_that_order()
+    {
+        await AddOrderAsync("WS-1");
+        await AddOrderAsync("WS-2");
+
+        Assert.True(await CreateService().InvoiceOrderAsync((await GetOrderAsync("WS-2")).Id));
+
+        Assert.Equal(SyncStatus.Pending, (await GetOrderAsync("WS-1")).Status);
+        Assert.Equal(SyncStatus.Synced, (await GetOrderAsync("WS-2")).Status);
+        Assert.False(await CreateService().InvoiceOrderAsync((await GetOrderAsync("WS-2")).Id));
+        Assert.Single(moneybird.CreatedInvoices);
+    }
+
+    [Fact]
     public async Task New_contact_is_created_with_split_name()
     {
         await AddOrderAsync("WS-1", customer: "Levi van Leeuwen");
@@ -268,11 +312,11 @@ public sealed class OrderInvoicingServiceTests : IDisposable
     }
 
     private async Task AddOrderAsync(string orderId, SyncStatus status = SyncStatus.Pending,
-        DateTimeOffset? lastAttemptAt = null, string customer = "Sanne de Vries")
+        DateTimeOffset? lastAttemptAt = null, string customer = "Sanne de Vries", MockOrderLine[]? lines = null)
     {
         shop.Orders.Add(new MockOrder(orderId, customer, $"klant-{orderId}@example.nl",
             new DateTimeOffset(2026, 10, 1, 9, 30, 0, TimeSpan.FromHours(2)),
-            [new MockOrderLine("Koffiebonen", 2, 12.50m)]));
+            lines ?? [new MockOrderLine("Koffiebonen", 2, 12.50m)]));
 
         using var db = new OrderSyncDbContext(dbOptions);
         db.SyncedOrders.Add(new SyncedOrder
@@ -288,7 +332,7 @@ public sealed class OrderInvoicingServiceTests : IDisposable
     private async Task<SyncedOrder> GetOrderAsync(string orderId)
     {
         using var db = new OrderSyncDbContext(dbOptions);
-        return await db.SyncedOrders.AsNoTracking().SingleAsync(o => o.OrderId == orderId);
+        return await db.SyncedOrders.AsNoTracking().Include(o => o.InvoiceLines).SingleAsync(o => o.OrderId == orderId);
     }
 
     private sealed class FixedTime(DateTimeOffset now) : TimeProvider

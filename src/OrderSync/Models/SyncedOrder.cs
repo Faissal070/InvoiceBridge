@@ -22,4 +22,14 @@ public class SyncedOrder
     public DateTimeOffset? LastAttemptAt { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+
+    // Snapshot of the invoice, filled in when the order is synced.
+
+    public string? CustomerName { get; set; }
+
+    public DateOnly? InvoiceDate { get; set; }
+
+    public decimal? Total { get; set; }
+
+    public List<InvoiceLine> InvoiceLines { get; set; } = [];
 }

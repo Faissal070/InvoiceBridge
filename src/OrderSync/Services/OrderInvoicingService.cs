@@ -75,6 +75,13 @@ public class OrderInvoicingService(
     public async Task<bool> RetryOrderAsync(int syncedOrderId, CancellationToken cancellationToken = default) =>
         await InvoiceAsync(syncedOrderId, force: true, cancellationToken) == Outcome.Synced;
 
+    /// <summary>
+    /// Invoices one order right away (e.g. a demo order), with the same rules as the automatic run.
+    /// </summary>
+    /// <returns>True if the order is now synced.</returns>
+    public async Task<bool> InvoiceOrderAsync(int syncedOrderId, CancellationToken cancellationToken = default) =>
+        await InvoiceAsync(syncedOrderId, force: false, cancellationToken) == Outcome.Synced;
+
     private enum Outcome { Skipped, Synced, Failed, RateLimited }
 
     private async Task<Outcome> InvoiceAsync(int id, bool force, CancellationToken cancellationToken)
@@ -102,8 +109,11 @@ public class OrderInvoicingService(
         var orderId = await db.SyncedOrders.Where(o => o.Id == id).Select(o => o.OrderId).SingleAsync(cancellationToken);
         try
         {
-            var invoiceId = await CreateOrAdoptInvoiceAsync(orderId, cancellationToken);
-            await MarkSyncedAsync(id, invoiceId, cancellationToken);
+            // Always fetched, also when adopting an invoice, so there is a snapshot to show.
+            var order = await shop.GetOrderAsync(orderId, cancellationToken)
+                ?? throw new InvalidOperationException($"Bestelling {orderId} niet gevonden in de webshop.");
+            var invoiceId = await CreateOrAdoptInvoiceAsync(order, cancellationToken);
+            await MarkSyncedAsync(id, invoiceId, order);
             logger.LogInformation("Order {OrderId} invoiced as Moneybird invoice {InvoiceId}", orderId, invoiceId);
             return Outcome.Synced;
         }
@@ -126,17 +136,14 @@ public class OrderInvoicingService(
         }
     }
 
-    private async Task<string> CreateOrAdoptInvoiceAsync(string orderId, CancellationToken cancellationToken)
+    private async Task<string> CreateOrAdoptInvoiceAsync(MockOrder order, CancellationToken cancellationToken)
     {
-        var existing = await moneybird.FindInvoiceByReferenceAsync(orderId, cancellationToken);
+        var existing = await moneybird.FindInvoiceByReferenceAsync(order.OrderId, cancellationToken);
         if (existing is not null)
         {
-            logger.LogInformation("Order {OrderId} already has Moneybird invoice {InvoiceId}; adopting it", orderId, existing.Id);
+            logger.LogInformation("Order {OrderId} already has Moneybird invoice {InvoiceId}; adopting it", order.OrderId, existing.Id);
             return existing.Id;
         }
-
-        var order = await shop.GetOrderAsync(orderId, cancellationToken)
-            ?? throw new InvalidOperationException($"Bestelling {orderId} niet gevonden in de webshop.");
 
         var contact = await moneybird.FindContactByEmailAsync(order.Email, cancellationToken)
             ?? await moneybird.CreateContactAsync(ToContact(order), cancellationToken);
@@ -144,23 +151,40 @@ public class OrderInvoicingService(
         var invoice = await moneybird.CreateInvoiceAsync(new NewMoneybirdInvoice(
             contact.Id,
             order.OrderId,
-            DateOnly.FromDateTime(order.OrderDate.Date),
+            InvoiceDateFor(order),
             order.Lines.Select(l => new NewMoneybirdInvoiceLine(l.Product, l.Quantity, l.UnitPrice)).ToList()),
             cancellationToken);
 
         return invoice.Id;
     }
 
-    private Task MarkSyncedAsync(int id, string invoiceId, CancellationToken cancellationToken)
+    private async Task MarkSyncedAsync(int id, string invoiceId, MockOrder order)
     {
         var now = time.GetUtcNow();
         // Not cancellable: once Moneybird has the invoice we want to record it.
-        return db.SyncedOrders.Where(o => o.Id == id).ExecuteUpdateAsync(s => s
+        await using var transaction = await db.Database.BeginTransactionAsync(CancellationToken.None);
+        await db.SyncedOrders.Where(o => o.Id == id).ExecuteUpdateAsync(s => s
             .SetProperty(o => o.Status, SyncStatus.Synced)
             .SetProperty(o => o.MoneybirdInvoiceId, invoiceId)
             .SetProperty(o => o.SyncedAt, now)
-            .SetProperty(o => o.LastError, (string?)null), CancellationToken.None);
+            .SetProperty(o => o.LastError, (string?)null)
+            .SetProperty(o => o.CustomerName, order.CustomerName)
+            .SetProperty(o => o.InvoiceDate, InvoiceDateFor(order))
+            .SetProperty(o => o.Total, order.Total), CancellationToken.None);
+
+        await db.InvoiceLines.Where(l => l.SyncedOrderId == id).ExecuteDeleteAsync(CancellationToken.None);
+        db.InvoiceLines.AddRange(order.Lines.Select(l => new InvoiceLine
+        {
+            SyncedOrderId = id,
+            Description = l.Product,
+            Quantity = l.Quantity,
+            UnitPrice = l.UnitPrice
+        }));
+        await db.SaveChangesAsync(CancellationToken.None);
+        await transaction.CommitAsync(CancellationToken.None);
     }
+
+    private static DateOnly InvoiceDateFor(MockOrder order) => DateOnly.FromDateTime(order.OrderDate.Date);
 
     private Task MarkFailedAsync(int id, string reason, CancellationToken cancellationToken) =>
         db.SyncedOrders.Where(o => o.Id == id).ExecuteUpdateAsync(s => s
