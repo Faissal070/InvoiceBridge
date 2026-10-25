@@ -30,18 +30,27 @@ public class OrderSyncWorker(
 
     private async Task RunOnceAsync(CancellationToken stoppingToken)
     {
+        using var scope = scopeFactory.CreateScope();
+
+        // Fetching and invoicing are independent: pending orders are still invoiced when the shop is down.
+        await TryAsync("Fetching new orders", () =>
+            scope.ServiceProvider.GetRequiredService<OrderSyncService>().SyncNewOrdersAsync(stoppingToken), stoppingToken);
+        await TryAsync("Invoicing orders", () =>
+            scope.ServiceProvider.GetRequiredService<OrderInvoicingService>().InvoicePendingOrdersAsync(stoppingToken), stoppingToken);
+    }
+
+    private async Task TryAsync(string step, Func<Task> action, CancellationToken stoppingToken)
+    {
         try
         {
-            using var scope = scopeFactory.CreateScope();
-            var sync = scope.ServiceProvider.GetRequiredService<OrderSyncService>();
-            await sync.SyncNewOrdersAsync(stoppingToken);
+            await action();
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Order sync run failed");
+            logger.LogError(ex, "{Step} failed", step);
         }
     }
 

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using OrderSync.Components;
 using OrderSync.Data;
 using OrderSync.MockShop;
+using OrderSync.Moneybird;
 using OrderSync.Sync;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,6 +17,12 @@ builder.Services.AddDbContext<OrderSyncDbContext>(options =>
 builder.Services.AddHttpClient<MockShopClient>(client =>
     client.BaseAddress = new Uri(builder.Configuration["MockShop:BaseUrl"] ?? "http://localhost:5168/"));
 builder.Services.AddScoped<OrderSyncService>();
+
+builder.Services.Configure<MoneybirdOptions>(builder.Configuration.GetSection(MoneybirdOptions.SectionName));
+builder.Services.AddHttpClient<IMoneybirdClient, MoneybirdClient>(client =>
+    client.Timeout = TimeSpan.FromSeconds(30));
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddScoped<OrderInvoicingService>();
 builder.Services.AddHostedService<OrderSyncWorker>();
 
 var app = builder.Build();

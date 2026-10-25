@@ -1,23 +1,35 @@
 @page "/dashboard"
 @rendermode InteractiveServer
+@implements IDisposable
 @using Microsoft.EntityFrameworkCore
+@using Microsoft.Extensions.Options
 @using OrderSync.Data
+@using OrderSync.Moneybird
 @using OrderSync.Sync
 @inject IServiceScopeFactory ScopeFactory
+@inject IOptions<MoneybirdOptions> MoneybirdOptions
 @inject ILogger<Dashboard> Logger
 
 <PageTitle>Dashboard</PageTitle>
 
 <h1>Sync dashboard</h1>
 
+@if (!MoneybirdOptions.Value.IsConfigured)
+{
+    <div class="alert alert-warning">
+        Moneybird is niet geconfigureerd. Zet <code>Moneybird:Token</code> en
+        <code>Moneybird:AdministrationId</code> in user-secrets; bestellingen worden tot dan niet gefactureerd.
+    </div>
+}
+
 <div class="d-flex gap-2 mb-3">
-    <button class="btn btn-outline-secondary" @onclick="LoadAsync" disabled="@busy">Vernieuwen</button>
+    <button class="btn btn-outline-secondary" @onclick="RefreshAsync" disabled="@busy">Vernieuwen</button>
     <button class="btn btn-primary" @onclick="SyncNowAsync" disabled="@busy">Nu synchroniseren</button>
 </div>
 
 @if (message is not null)
 {
-    <div class="alert alert-info">@message</div>
+    <div class="alert @(messageIsError ? "alert-danger" : "alert-info")">@message</div>
 }
 
 @if (orders is null)
@@ -26,13 +38,13 @@
 }
 else
 {
-    <div class="d-flex gap-3 mb-3">
+    <div class="d-flex flex-wrap gap-3 mb-3">
         @foreach (var status in Enum.GetValues<SyncStatus>())
         {
             <div class="card text-center" style="min-width: 8rem">
                 <div class="card-body">
                     <div class="fs-3 fw-bold">@orders.Count(o => o.Status == status)</div>
-                    <span class="badge @BadgeClass(status)">@status</span>
+                    <span class="badge @BadgeClass(status)">@Label(status)</span>
                 </div>
             </div>
         }
@@ -44,27 +56,43 @@ else
     }
     else
     {
-        <table class="table table-sm">
+        <table class="table table-sm align-middle">
             <thead>
                 <tr>
                     <th>Order</th>
                     <th>Status</th>
                     <th>Pogingen</th>
-                    <th>Laatste fout</th>
+                    <th>Laatste poging</th>
+                    <th>Reden mislukt</th>
                     <th>Moneybird-factuur</th>
-                    <th>Gesynchroniseerd op</th>
+                    <th>Gefactureerd op</th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var order in orders)
                 {
-                    <tr>
+                    <tr class="@(order.Status == SyncStatus.Failed ? "table-danger" : null)">
                         <td>@order.OrderId</td>
-                        <td><span class="badge @BadgeClass(order.Status)">@order.Status</span></td>
+                        <td><span class="badge @BadgeClass(order.Status)">@Label(order.Status)</span></td>
                         <td>@order.Attempts</td>
-                        <td>@order.LastError</td>
-                        <td>@order.MoneybirdInvoiceId</td>
-                        <td>@order.SyncedAt?.ToLocalTime().ToString("dd-MM-yyyy HH:mm")</td>
+                        <td>@FormatDate(order.LastAttemptAt)</td>
+                        <td class="small">@(order.Status == SyncStatus.Failed ? order.LastError : null)</td>
+                        <td>
+                            @if (order.MoneybirdInvoiceId is not null)
+                            {
+                                <a href="@InvoiceUrl(order.MoneybirdInvoiceId)" target="_blank" rel="noopener">Bekijk factuur</a>
+                            }
+                        </td>
+                        <td>@FormatDate(order.SyncedAt)</td>
+                        <td>
+                            @if (order.Status == SyncStatus.Failed)
+                            {
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => RetryAsync(order)" disabled="@busy">
+                                    Opnieuw proberen
+                                </button>
+                            }
+                        </td>
                     </tr>
                 }
             </tbody>
@@ -73,11 +101,35 @@ else
 }
 
 @code {
+    private static readonly TimeSpan AutoRefreshInterval = TimeSpan.FromSeconds(15);
+
     private List<SyncedOrder>? orders;
     private string? message;
+    private bool messageIsError;
     private bool busy;
+    private Timer? refreshTimer;
 
-    protected override Task OnInitializedAsync() => LoadAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+        // The background worker updates orders; keep the page current while it is open.
+        refreshTimer = new Timer(_ => InvokeAsync(async () =>
+        {
+            if (!busy)
+            {
+                await LoadAsync();
+                StateHasChanged();
+            }
+        }), null, AutoRefreshInterval, AutoRefreshInterval);
+    }
+
+    public void Dispose() => refreshTimer?.Dispose();
+
+    private async Task RefreshAsync()
+    {
+        message = null;
+        await LoadAsync();
+    }
 
     private async Task LoadAsync()
     {
@@ -90,32 +142,85 @@ else
             .ToListAsync();
     }
 
-    private async Task SyncNowAsync()
+    private Task SyncNowAsync() => RunAsync("Synchroniseren", async services =>
     {
-        busy = true;
+        var parts = new List<string>();
         try
         {
-            using var scope = ScopeFactory.CreateScope();
-            var sync = scope.ServiceProvider.GetRequiredService<OrderSyncService>();
-            var count = await sync.SyncNewOrdersAsync();
-            message = $"{count} nieuwe bestelling(en) gevonden.";
-            await LoadAsync();
+            var count = await services.GetRequiredService<OrderSyncService>().SyncNewOrdersAsync();
+            parts.Add($"{count} nieuwe bestelling(en) opgehaald");
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Manual sync failed");
-            message = $"Synchroniseren mislukt: {ex.Message}";
+            // Still invoice what is already pending.
+            Logger.LogError(ex, "Fetching orders failed");
+            parts.Add($"ophalen mislukt: {ex.Message}");
+            messageIsError = true;
+        }
+
+        var result = await services.GetRequiredService<OrderInvoicingService>().InvoicePendingOrdersAsync();
+        if (result.NotConfigured)
+        {
+            parts.Add("factureren overgeslagen (Moneybird niet geconfigureerd)");
+        }
+        else
+        {
+            parts.Add($"{result.Synced} gefactureerd, {result.Failed} mislukt");
+            if (result.RateLimited) parts.Add("gestopt door Moneybird rate limit");
+            messageIsError |= result.Failed > 0;
+        }
+        message = string.Join("; ", parts) + ".";
+    });
+
+    private Task RetryAsync(SyncedOrder order) => RunAsync($"Opnieuw proberen {order.OrderId}", async services =>
+    {
+        var ok = await services.GetRequiredService<OrderInvoicingService>().RetryOrderAsync(order.Id);
+        message = ok ? $"{order.OrderId} is gefactureerd." : $"{order.OrderId} is opnieuw mislukt; zie de reden in de tabel.";
+        messageIsError = !ok;
+    });
+
+    private async Task RunAsync(string action, Func<IServiceProvider, Task> work)
+    {
+        busy = true;
+        message = null;
+        messageIsError = false;
+        try
+        {
+            using var scope = ScopeFactory.CreateScope();
+            await work(scope.ServiceProvider);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "{Action} failed", action);
+            message = $"{action} mislukt: {ex.Message}";
+            messageIsError = true;
         }
         finally
         {
+            await LoadAsync();
             busy = false;
         }
     }
+
+    private string InvoiceUrl(string invoiceId) =>
+        $"https://moneybird.com/{Uri.EscapeDataString(MoneybirdOptions.Value.AdministrationId ?? "")}/sales_invoices/{Uri.EscapeDataString(invoiceId)}";
+
+    private static string? FormatDate(DateTimeOffset? date) => date?.ToLocalTime().ToString("dd-MM-yyyy HH:mm");
+
+    private static string Label(SyncStatus status) => status switch
+    {
+        SyncStatus.Pending => "Wachtend",
+        SyncStatus.Processing => "Bezig",
+        SyncStatus.Synced => "Gefactureerd",
+        SyncStatus.Failed => "Mislukt",
+        _ => status.ToString()
+    };
 
     private static string BadgeClass(SyncStatus status) => status switch
     {
         SyncStatus.Synced => "bg-success",
         SyncStatus.Failed => "bg-danger",
+        SyncStatus.Processing => "bg-info text-dark",
         _ => "bg-warning text-dark"
     };
 }

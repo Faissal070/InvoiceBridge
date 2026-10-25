@@ -19,5 +19,7 @@ public class SyncedOrder
 
     public DateTimeOffset? SyncedAt { get; set; }
 
+    public DateTimeOffset? LastAttemptAt { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }
