@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using OrderSync.Components;
 using OrderSync.Data;
+using OrderSync.MockShop;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,6 +32,7 @@ app.UseHttpsRedirection();
 app.UseAntiforgery();
 
 app.MapStaticAssets();
+app.MapMockShop();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
