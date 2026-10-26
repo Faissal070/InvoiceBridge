@@ -1,0 +1,47 @@
+@page "/admin"
+@using Microsoft.AspNetCore.Http
+@inject IHttpContextAccessor HttpContextAccessor
+@inject OrderSync.Services.AdminAuthService AdminAuth
+
+<PageTitle>Beheerder – OrderSync</PageTitle>
+
+<div class="page-header">
+    <span class="eyebrow">Beheer</span>
+    <h1>Inloggen als beheerder</h1>
+    <p>Voer de beheerderscode in om de beheerdersweergave te activeren.</p>
+</div>
+
+<div style="max-width: 400px; margin: 0 auto;">
+    @if (AlreadyLoggedIn)
+    {
+        <div class="notice notice-success">
+            <Icon Name="check-circle" />
+            <span>Je bent al ingelogd als beheerder. <a href="/demo">Naar de live demo</a></span>
+        </div>
+    }
+
+    @if (ShowError)
+    {
+        <div class="notice notice-danger">
+            <Icon Name="alert" />
+            <span>Onjuiste code. Probeer het opnieuw.</span>
+        </div>
+    }
+
+    <form method="post" action="/admin/login" class="card card-body" style="margin-top: 1.5rem;">
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <label for="admin-code" style="font-weight: 500;">Beheerderscode</label>
+            <input id="admin-code" type="password" name="code" autocomplete="current-password" autofocus
+                   style="padding: 0.5rem 0.75rem; border: 1px solid var(--color-border); border-radius: 6px; font-size: 1rem;" />
+            <button type="submit" class="btn btn-primary">Inloggen</button>
+        </div>
+    </form>
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "error")]
+    public string? ErrorParam { get; set; }
+
+    private bool ShowError => ErrorParam == "1";
+    private bool AlreadyLoggedIn => AdminAuth.IsAdmin(HttpContextAccessor.HttpContext);
+}

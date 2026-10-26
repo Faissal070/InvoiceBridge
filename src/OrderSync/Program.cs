@@ -28,8 +28,12 @@ builder.Services.Configure<MoneybirdOptions>(builder.Configuration.GetSection(Mo
 builder.Services.AddHttpClient<IMoneybirdClient, MoneybirdClient>(client =>
     client.Timeout = TimeSpan.FromSeconds(30));
 builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<SandboxSimulationService>();
 builder.Services.AddScoped<OrderInvoicingService>();
 builder.Services.AddHostedService<OrderSyncWorker>();
+
+builder.Services.Configure<AdminOptions>(builder.Configuration.GetSection(AdminOptions.SectionName));
+builder.Services.AddSingleton<AdminAuthService>();
 
 builder.Services.Configure<DemoOptions>(builder.Configuration.GetSection(DemoOptions.SectionName));
 builder.Services.AddSingleton<DemoRateLimiter>();
@@ -62,6 +66,22 @@ app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages:
 app.UseHttpsRedirection();
 
 app.UseAntiforgery();
+
+app.MapPost("/admin/login", (AdminAuthService auth, HttpContext ctx, [Microsoft.AspNetCore.Mvc.FromForm] string code) =>
+{
+    var adminOptions = ctx.RequestServices.GetRequiredService<Microsoft.Extensions.Options.IOptions<AdminOptions>>().Value;
+    if (string.IsNullOrEmpty(adminOptions.AdminCode) || code != adminOptions.AdminCode)
+        return Results.Redirect("/admin?error=1");
+
+    ctx.Response.Cookies.Append("admin_token", AdminAuthService.ComputeToken(adminOptions.AdminCode), new CookieOptions
+    {
+        HttpOnly = true,
+        SameSite = SameSiteMode.Strict,
+        Secure = ctx.Request.IsHttps,
+        MaxAge = TimeSpan.FromDays(30)
+    });
+    return Results.Redirect("/demo");
+}).DisableAntiforgery();
 
 app.MapStaticAssets();
 app.MapMockShop();

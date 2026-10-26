@@ -165,6 +165,7 @@ public class MoneybirdClient(HttpClient http, IOptions<MoneybirdOptions> options
             HttpStatusCode.Unauthorized => "Moneybird-token is ongeldig of verlopen (401).",
             HttpStatusCode.Forbidden => "Moneybird-token heeft geen rechten voor deze actie (403).",
             HttpStatusCode.NotFound => "Moneybird-administratie of resource niet gevonden (404). Controleer de administratie-ID.",
+            HttpStatusCode.PaymentRequired => "Moneybird sandbox-factuurlimiet bereikt (402).",
             HttpStatusCode.TooManyRequests => "Moneybird rate limit bereikt (429). Later opnieuw proberen.",
             HttpStatusCode.UnprocessableEntity => $"Moneybird weigerde de gegevens (422): {await ReadErrorAsync(response, cancellationToken)}",
             _ => $"Moneybird gaf foutcode {(int)status}: {await ReadErrorAsync(response, cancellationToken)}"

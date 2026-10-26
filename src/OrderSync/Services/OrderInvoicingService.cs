@@ -1,10 +1,12 @@
 using System.Linq.Expressions;
 using System.Net;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using OrderSync.Clients;
 using OrderSync.Data;
 using OrderSync.Exceptions;
 using OrderSync.Models;
+using OrderSync.Options;
 
 namespace OrderSync.Services;
 
@@ -25,6 +27,8 @@ public class OrderInvoicingService(
     MockShopClient shop,
     OrderChangeNotifier notifier,
     TimeProvider time,
+    IOptions<MoneybirdOptions> moneybirdOptions,
+    SandboxSimulationService simulation,
     ILogger<OrderInvoicingService> logger)
 {
     public const int MaxAutomaticAttempts = 5;
@@ -44,30 +48,50 @@ public class OrderInvoicingService(
             return new InvoiceRunResult(0, 0, false, NotConfigured: true);
         }
 
+        // Count invoices sent to Moneybird this calendar month (simulated ones don't count).
+        var firstOfMonth = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var syncedThisMonth = await db.SyncedOrders
+            .CountAsync(o => o.Status == SyncStatus.Synced && o.SyncedAt >= firstOfMonth, cancellationToken);
+
+        var limit = moneybirdOptions.Value.SandboxInvoiceLimit;
+        if (syncedThisMonth >= limit)
+            simulation.ActivateLocalLimit();
+        else if (simulation.Reason == SimulationReason.LocalLimit)
+            simulation.Deactivate(); // new calendar month — counter reset
+
+        // When a previous 402 has been waiting for an hour, deactivate simulation so the next
+        // order is tried against real Moneybird. If it gets 402 again, InvoiceAsync re-activates.
+        if (simulation.ShouldRetryMoneybird)
+        {
+            logger.LogInformation("Sandbox-simulatie: een uur verstreken, probeer Moneybird opnieuw.");
+            simulation.Deactivate();
+        }
+
         var ids = await db.SyncedOrders
             .Where(IsEligible(force: false, time.GetUtcNow()))
             .OrderBy(o => o.Id)
             .Select(o => o.Id)
             .ToListAsync(cancellationToken);
 
-        int synced = 0, failed = 0;
+        int synced = 0, failed = 0, simulated = 0;
         foreach (var id in ids)
         {
             var outcome = await InvoiceAsync(id, force: false, cancellationToken);
             if (outcome == Outcome.Synced) synced++;
-            if (outcome is Outcome.Failed or Outcome.RateLimited) failed++;
+            else if (outcome == Outcome.Simulated) simulated++;
+            else if (outcome is Outcome.Failed or Outcome.RateLimited) failed++;
             if (outcome == Outcome.RateLimited)
             {
                 logger.LogWarning("Moneybird rate limit reached; stopping this run");
-                return new InvoiceRunResult(synced, failed, RateLimited: true);
+                return new InvoiceRunResult(synced, failed, RateLimited: true, Simulated: simulated);
             }
         }
 
         if (ids.Count > 0)
         {
-            logger.LogInformation("Invoicing run: {Synced} synced, {Failed} failed", synced, failed);
+            logger.LogInformation("Invoicing run: {Synced} synced, {Failed} failed, {Simulated} simulated", synced, failed, simulated);
         }
-        return new InvoiceRunResult(synced, failed, RateLimited: false);
+        return new InvoiceRunResult(synced, failed, RateLimited: false, Simulated: simulated);
     }
 
     /// <summary>
@@ -87,7 +111,7 @@ public class OrderInvoicingService(
         {
             if (await shop.GetOrderAsync(order.OrderId, cancellationToken) is { } shopOrder)
             {
-                await SaveSnapshotAsync(order.Id, order.MoneybirdInvoiceId!, shopOrder, syncedAt: null);
+                await SaveSnapshotAsync(order.Id, order.MoneybirdInvoiceId, shopOrder, syncedAt: null);
                 filled++;
             }
         }
@@ -103,18 +127,24 @@ public class OrderInvoicingService(
     /// <summary>
     /// Manually retries one order (from the dashboard), also after the automatic attempts ran out.
     /// </summary>
-    /// <returns>True if the order is now synced.</returns>
-    public async Task<bool> RetryOrderAsync(int syncedOrderId, CancellationToken cancellationToken = default) =>
-        await InvoiceAsync(syncedOrderId, force: true, cancellationToken) == Outcome.Synced;
+    /// <returns>True if the order is now synced or simulated.</returns>
+    public async Task<bool> RetryOrderAsync(int syncedOrderId, CancellationToken cancellationToken = default)
+    {
+        var outcome = await InvoiceAsync(syncedOrderId, force: true, cancellationToken);
+        return outcome is Outcome.Synced or Outcome.Simulated;
+    }
 
     /// <summary>
     /// Invoices one order right away (e.g. a demo order), with the same rules as the automatic run.
     /// </summary>
-    /// <returns>True if the order is now synced.</returns>
-    public async Task<bool> InvoiceOrderAsync(int syncedOrderId, CancellationToken cancellationToken = default) =>
-        await InvoiceAsync(syncedOrderId, force: false, cancellationToken) == Outcome.Synced;
+    /// <returns>True if the order is now synced or simulated.</returns>
+    public async Task<bool> InvoiceOrderAsync(int syncedOrderId, CancellationToken cancellationToken = default)
+    {
+        var outcome = await InvoiceAsync(syncedOrderId, force: false, cancellationToken);
+        return outcome is Outcome.Synced or Outcome.Simulated;
+    }
 
-    private enum Outcome { Skipped, Synced, Failed, RateLimited }
+    private enum Outcome { Skipped, Synced, Simulated, Failed, RateLimited }
 
     private async Task<Outcome> InvoiceAsync(int id, bool force, CancellationToken cancellationToken)
     {
@@ -142,10 +172,31 @@ public class OrderInvoicingService(
         var orderId = await db.SyncedOrders.Where(o => o.Id == id).Select(o => o.OrderId).SingleAsync(cancellationToken);
         try
         {
-            // Always fetched, also when adopting an invoice, so there is a snapshot to show.
+            // Always fetched — also for simulation — so the snapshot is available on the invoice page.
+            // Validation failures (order not found, etc.) always result in Failed, even in simulation mode.
             var order = await shop.GetOrderAsync(orderId, cancellationToken)
                 ?? throw new OrderNotFoundException(orderId);
-            var invoiceId = await CreateOrAdoptInvoiceAsync(order, cancellationToken);
+
+            if (simulation.IsSimulating)
+            {
+                await MarkSimulatedAsync(id, order);
+                logger.LogInformation("Order {OrderId} simulated (sandbox limit active)", orderId);
+                return Outcome.Simulated;
+            }
+
+            string invoiceId;
+            try
+            {
+                invoiceId = await CreateOrAdoptInvoiceAsync(order, cancellationToken);
+            }
+            catch (MoneybirdException ex) when (ex.IsPaymentRequired)
+            {
+                simulation.ActivatePaymentRequired();
+                await MarkSimulatedAsync(id, order);
+                logger.LogWarning("Order {OrderId} simulated after Moneybird 402", orderId);
+                return Outcome.Simulated;
+            }
+
             await MarkSyncedAsync(id, invoiceId, order);
             logger.LogInformation("Order {OrderId} invoiced as Moneybird invoice {InvoiceId}", orderId, invoiceId);
             return Outcome.Synced;
@@ -207,15 +258,18 @@ public class OrderInvoicingService(
     }
 
     private Task MarkSyncedAsync(int id, string invoiceId, MockOrder order) =>
-        SaveSnapshotAsync(id, invoiceId, order, syncedAt: time.GetUtcNow());
+        SaveSnapshotAsync(id, invoiceId, order, syncedAt: time.GetUtcNow(), SyncStatus.Synced);
+
+    private Task MarkSimulatedAsync(int id, MockOrder order) =>
+        SaveSnapshotAsync(id, invoiceId: null, order, syncedAt: time.GetUtcNow(), SyncStatus.Simulated);
 
     /// <param name="syncedAt">New sync time, or null to keep the stored one (backfill).</param>
-    private async Task SaveSnapshotAsync(int id, string invoiceId, MockOrder order, DateTimeOffset? syncedAt)
+    private async Task SaveSnapshotAsync(int id, string? invoiceId, MockOrder order, DateTimeOffset? syncedAt, SyncStatus status = SyncStatus.Synced)
     {
-        // Not cancellable: once Moneybird has the invoice we want to record it.
+        // Not cancellable: once Moneybird has the invoice (or we decided to simulate) we want to record it.
         await using var transaction = await db.Database.BeginTransactionAsync(CancellationToken.None);
         await db.SyncedOrders.Where(o => o.Id == id).ExecuteUpdateAsync(s => s
-            .SetProperty(o => o.Status, SyncStatus.Synced)
+            .SetProperty(o => o.Status, status)
             .SetProperty(o => o.MoneybirdInvoiceId, invoiceId)
             .SetProperty(o => o.SyncedAt, o => syncedAt ?? o.SyncedAt)
             .SetProperty(o => o.LastError, (string?)null)

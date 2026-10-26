@@ -5,5 +5,6 @@ public enum SyncStatus
     Pending,
     Processing,
     Synced,
-    Failed
+    Failed,
+    Simulated
 }

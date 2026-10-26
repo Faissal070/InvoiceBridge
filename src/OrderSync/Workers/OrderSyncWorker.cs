@@ -37,8 +37,12 @@ public class OrderSyncWorker(
         // Fetching and invoicing are independent: pending orders are still invoiced when the shop is down.
         await TryAsync("Fetching new orders", () =>
             scope.ServiceProvider.GetRequiredService<OrderSyncService>().SyncNewOrdersAsync(stoppingToken), stoppingToken);
-        await TryAsync("Invoicing orders", () =>
-            scope.ServiceProvider.GetRequiredService<OrderInvoicingService>().InvoicePendingOrdersAsync(stoppingToken), stoppingToken);
+        await TryAsync("Invoicing orders", async () =>
+        {
+            var result = await scope.ServiceProvider.GetRequiredService<OrderInvoicingService>().InvoicePendingOrdersAsync(stoppingToken);
+            if (result.Simulated > 0)
+                logger.LogWarning("Simulatiemodus actief: {Count} factuur/facturen gesimuleerd deze run.", result.Simulated);
+        }, stoppingToken);
         await TryAsync("Adding invoice snapshots", () =>
             scope.ServiceProvider.GetRequiredService<OrderInvoicingService>().BackfillSnapshotsAsync(stoppingToken), stoppingToken);
     }

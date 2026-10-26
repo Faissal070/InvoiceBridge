@@ -5,17 +5,20 @@
 @using OrderSync.MockShop
 @using OrderSync.Models
 @using OrderSync.Options
+@using OrderSync.Services
 @inject OrderSyncDbContext Db
 @inject MockOrderStore Shop
 @inject IOptions<DemoOptions> DemoOptions
 @inject IOptions<MoneybirdOptions> MoneybirdOptions
+@inject IHttpContextAccessor HttpContextAccessor
+@inject AdminAuthService AdminAuth
 
 <PageTitle>Factuur @OrderId – OrderSync</PageTitle>
 
 <div class="invoice-page">
     <div class="invoice-toolbar">
         <a class="btn btn-ghost btn-sm" href="demo"><Icon Name="arrow-left" Size="16" /> Terug naar de live demo</a>
-        @if (order?.MoneybirdInvoiceId is not null && DemoOptions.Value.ShowMoneybirdLinks)
+        @if (_isAdmin && order?.MoneybirdInvoiceId is not null && order.Status == SyncStatus.Synced)
         {
             <a class="btn btn-secondary btn-sm" href="@MoneybirdUrl(order.MoneybirdInvoiceId)" target="_blank" rel="noopener">
                 Open in Moneybird <Icon Name="external" Size="15" />
@@ -32,7 +35,7 @@
             <a class="btn btn-primary" href="demo">Naar de live demo</a>
         </div>
     }
-    else if (order.Status != SyncStatus.Synced)
+    else if (order.Status is not SyncStatus.Synced and not SyncStatus.Simulated)
     {
         <div class="card empty-state">
             <span class="icon-badge icon-badge-warning"><Icon Name="clock" /></span>
@@ -56,10 +59,20 @@
     }
     else
     {
-        <div class="notice notice-success">
-            <Icon Name="check-circle" />
-            <span>Deze factuur is automatisch door OrderSync in Moneybird aangemaakt op @Display.DateAndTime(order.SyncedAt). Zo ziet de klant hem straks.</span>
-        </div>
+        @if (order.Status == SyncStatus.Synced)
+        {
+            <div class="notice notice-success">
+                <Icon Name="check-circle" />
+                <span>Deze factuur is automatisch door OrderSync in Moneybird aangemaakt op @Display.DateAndTime(order.SyncedAt). Zo ziet de klant hem straks.</span>
+            </div>
+        }
+        else
+        {
+            <div class="notice notice-info">
+                <Icon Name="info" />
+                <span>Demo-modus: deze factuur is lokaal gesimuleerd en staat niet in Moneybird.</span>
+            </div>
+        }
 
         <article class="card invoice-paper" aria-label="Factuur">
             <header class="invoice-top">
@@ -68,7 +81,7 @@
                     <p>Voorbeeldstraat 1, 1234 AB Demostad<br />Fictief demobedrijf</p>
                 </div>
                 <div class="invoice-title">
-                    <h1>Conceptfactuur</h1>
+                    <h1>@(order.Status == SyncStatus.Simulated ? "Gesimuleerde factuur" : "Conceptfactuur")</h1>
                     <StatusBadge Status="order.Status" />
                     <dl class="invoice-meta">
                         <dt>Referentie</dt><dd class="mono">@order.OrderId</dd>
@@ -130,9 +143,12 @@
     private List<InvoiceLine> lines = [];
     private string? customerName;
     private DateOnly? invoiceDate;
+    private bool _isAdmin;
 
     protected override async Task OnParametersSetAsync()
     {
+        _isAdmin = AdminAuth.IsAdmin(HttpContextAccessor.HttpContext);
+
         order = await Db.SyncedOrders
             .AsNoTracking()
             .Include(o => o.InvoiceLines)

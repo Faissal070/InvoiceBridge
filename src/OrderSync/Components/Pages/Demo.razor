@@ -18,6 +18,10 @@
 @inject MockOrderStore Shop
 @inject TimeProvider Time
 @inject ILogger<Demo> Logger
+@inject IHttpContextAccessor HttpContextAccessor
+@inject AdminAuthService AdminAuth
+@inject SandboxSimulationService SimulationService
+@inject PersistentComponentState AppState
 
 <PageTitle>Live demo – OrderSync</PageTitle>
 
@@ -37,6 +41,13 @@
             <div class="notice notice-info mt-md">
                 <Icon Name="info" />
                 <span>De demo is even niet beschikbaar: er kunnen nu geen facturen worden aangemaakt. Bekijk gerust de facturen hieronder.</span>
+            </div>
+        }
+        else if (!_isAdmin && SimulationService.IsSimulating)
+        {
+            <div class="notice notice-info mt-md">
+                <Icon Name="info" />
+                <span>Demo-modus: nieuwe facturen worden gesimuleerd.</span>
             </div>
         }
 
@@ -114,6 +125,19 @@
     </section>
 
     <section class="stat-tiles" aria-label="Overzicht">
+        @if (_isAdmin)
+        {
+            var limit = MoneybirdOptions.Value.SandboxInvoiceLimit;
+            var pct = limit > 0 ? (double)_syncedThisMonth / limit : 1.0;
+            var tone = pct >= 1.0 ? "danger" : pct >= 0.7 ? "warning" : "info";
+            <div class="card stat-tile stat-tile-wide">
+                <span class="icon-badge icon-badge-@tone"><Icon Name="invoice" /></span>
+                <div class="stat">
+                    <span class="stat-value">@_syncedThisMonth / @limit</span>
+                    <span class="stat-note">Moneybird sandbox-facturen deze maand@(SimulationService.IsSimulating ? " · simulatiemodus actief" : null)</span>
+                </div>
+            </div>
+        }
         @foreach (var status in TileStatuses)
         {
             <div class="card stat-tile">
@@ -167,10 +191,11 @@
                     <div class="order-amount">@Display.Amount(order.Total ?? shopOrder?.Total)</div>
                     <div class="order-status"><StatusBadge Status="order.Status" /></div>
                     <div class="order-time">@Display.Relative(order.SyncedAt ?? order.LastAttemptAt ?? order.CreatedAt, Time.GetUtcNow())</div>
-                    <div class="order-action">@if (order.Status == SyncStatus.Synced)
+                    <div class="order-action">
+                        @if (order.Status is SyncStatus.Synced or SyncStatus.Simulated)
                         {
                             <a class="link-arrow" href="@InvoiceHref(order.OrderId)">Factuur <Icon Name="arrow-right" Size="16" /></a>
-                            @if (DemoOptions.Value.ShowMoneybirdLinks && order.MoneybirdInvoiceId is not null)
+                            @if (_isAdmin && order.MoneybirdInvoiceId is not null && order.Status == SyncStatus.Synced)
                             {
                                 <a class="link-arrow subtle" href="@MoneybirdUrl(order.MoneybirdInvoiceId)" target="_blank" rel="noopener">Moneybird <Icon Name="external" Size="14" /></a>
                             }
@@ -180,7 +205,8 @@
                             <button class="btn btn-secondary btn-sm" @onclick="() => RetryAsync(order.Id, order.OrderId)" disabled="@busy">
                                 <Icon Name="sync" Size="16" /> Opnieuw proberen
                             </button>
-                        }</div>
+                        }
+                    </div>
                     @if (order.Status == SyncStatus.Failed)
                     {
                         <div class="order-error">
@@ -235,17 +261,34 @@
     private bool busy;
     private Timer? refreshTimer;
     private int refreshQueued;
+    private bool _isAdmin;
+    private int _syncedThisMonth;
+    private PersistingComponentStateSubscription _persistSubscription;
 
     protected override async Task OnInitializedAsync()
     {
+        _persistSubscription = AppState.RegisterOnPersisting(PersistState);
+
+        // Read admin status from the component state (after circuit connects) or from the cookie (during prerender).
+        if (!AppState.TryTakeFromJson<bool>("isAdmin", out var isAdmin))
+            isAdmin = AdminAuth.IsAdmin(HttpContextAccessor.HttpContext);
+        _isAdmin = isAdmin;
+
         await LoadAsync();
         Notifier.Changed += OnOrdersChanged;
         // Fallback in case a change notification is missed; also keeps "x min geleden" current.
         refreshTimer = new Timer(_ => OnOrdersChanged(), null, AutoRefreshInterval, AutoRefreshInterval);
     }
 
+    private Task PersistState()
+    {
+        AppState.PersistAsJson("isAdmin", _isAdmin);
+        return Task.CompletedTask;
+    }
+
     public void Dispose()
     {
+        _persistSubscription.Dispose();
         Notifier.Changed -= OnOrdersChanged;
         refreshTimer?.Dispose();
     }
@@ -288,6 +331,13 @@
             .Select(g => new { g.Key, Count = g.Count() })
             .ToDictionaryAsync(g => g.Key, g => g.Count);
 
+        if (_isAdmin)
+        {
+            var firstOfMonth = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            _syncedThisMonth = await db.SyncedOrders
+                .CountAsync(o => o.Status == SyncStatus.Synced && o.SyncedAt >= firstOfMonth);
+        }
+
         // Highlight rows that are new or changed status since the previous load (not on the first load).
         changedIds = orders is null
             ? []
@@ -311,7 +361,7 @@
 
         switch (order.Status)
         {
-            case SyncStatus.Synced when run.Step != DemoStep.Done:
+            case SyncStatus.Synced or SyncStatus.Simulated when run.Step != DemoStep.Done:
                 run.Step = DemoStep.Done;
                 break;
             case SyncStatus.Failed:
