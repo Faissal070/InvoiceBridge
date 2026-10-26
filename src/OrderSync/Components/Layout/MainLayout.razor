@@ -1,6 +1,8 @@
 ﻿@inherits LayoutComponentBase
+@inject IStringLocalizer<SharedResources> L
+@inject IHttpContextAccessor HttpContextAccessor
 
-<a class="skip-link" href="#main">Naar de inhoud</a>
+<a class="skip-link" href="#main">@L["SkipToContent"]</a>
 
 <header class="topbar">
     <div class="container topbar-inner">
@@ -9,9 +11,13 @@
             OrderSync
         </a>
         <nav class="topnav" aria-label="Hoofdmenu">
-            <NavLink href="" Match="NavLinkMatch.All">Hoe het werkt</NavLink>
-            <NavLink href="demo" class="topnav-cta">Live demo</NavLink>
+            <NavLink href="" Match="NavLinkMatch.All">@L["Nav_HowItWorks"]</NavLink>
+            <NavLink href="demo" class="topnav-cta">@L["Nav_LiveDemo"]</NavLink>
         </nav>
+        <div class="lang-switcher" aria-label="Taal / Language">
+            <a href="/set-culture/nl" class="lang-btn @(IsNl ? "lang-btn-active" : null)">NL</a>
+            <a href="/set-culture/en" class="lang-btn @(!IsNl ? "lang-btn-active" : null)">EN</a>
+        </div>
     </div>
 </header>
 
@@ -21,12 +27,16 @@
 
 <footer class="footer">
     <div class="container footer-inner">
-        <span>Demo met fictieve gegevens. Facturen zijn concepten in een testadministratie.</span>
+        <span>@L["Footer_DemoNote"]</span>
         <span>OrderSync</span>
     </div>
 </footer>
 
 <div id="blazor-error-ui" data-nosnippet>
-    Er ging iets mis. <a href="." class="reload">Pagina opnieuw laden</a>
-    <button class="dismiss" type="button" aria-label="Sluiten">×</button>
+    @L["Error_Message"] <a href="." class="reload">@L["Error_Reload"]</a>
+    <button class="dismiss" type="button" aria-label="@L["Error_Dismiss"]">×</button>
 </div>
+
+@code {
+    private bool IsNl => HttpContextAccessor.HttpContext?.Request.Cookies["lang"] is not "en";
+}

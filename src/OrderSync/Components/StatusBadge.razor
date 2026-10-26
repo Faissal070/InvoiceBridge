@@ -1,7 +1,8 @@
 @using OrderSync.Models
+@inject IStringLocalizer<SharedResources> L
 
 <span class="pill pill-@Display.Tone(Status)">
-    <span class="pill-dot" aria-hidden="true"></span>@Display.Label(Status)
+    <span class="pill-dot" aria-hidden="true"></span>@L[$"Status_{Status}"]
 </span>
 
 @code {

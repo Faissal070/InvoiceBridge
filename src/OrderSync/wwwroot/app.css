@@ -101,6 +101,14 @@ a:hover { color: var(--accent-hover); }
 .topnav a.topnav-cta { color: var(--accent); }
 .topnav a.topnav-cta.active { color: var(--accent); background: var(--accent-soft); }
 
+.lang-switcher { display: flex; align-items: center; gap: 2px; margin-left: 4px; }
+.lang-btn {
+    padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600;
+    color: var(--text-muted); letter-spacing: 0.03em;
+}
+.lang-btn:hover { color: var(--text); background: var(--surface-muted); }
+.lang-btn-active { color: var(--text); background: #eef0f3; }
+
 .page { flex: 1; padding-top: 28px; padding-bottom: 56px; }
 
 .footer { border-top: 1px solid var(--border); background: var(--surface); color: var(--text-subtle); font-size: 14px; }
