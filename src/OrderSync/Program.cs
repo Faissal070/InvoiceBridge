@@ -24,6 +24,7 @@ builder.Services.AddHttpClient<MockShopClient>(client =>
 builder.Services.AddSingleton<OrderChangeNotifier>();
 builder.Services.AddScoped<OrderSyncService>();
 
+builder.Services.AddMemoryCache();
 builder.Services.Configure<MoneybirdOptions>(builder.Configuration.GetSection(MoneybirdOptions.SectionName));
 builder.Services.AddHttpClient<IMoneybirdClient, MoneybirdClient>(client =>
     client.Timeout = TimeSpan.FromSeconds(30));

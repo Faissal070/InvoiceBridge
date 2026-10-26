@@ -466,5 +466,8 @@ public sealed class OrderInvoicingServiceTests : IDisposable
             Invoices.Add(created);
             return Task.FromResult(created);
         }
+
+        public Task<MoneybirdInvoiceDetails> GetInvoiceAsync(string invoiceId, CancellationToken cancellationToken = default) =>
+            throw new NotImplementedException();
     }
 }

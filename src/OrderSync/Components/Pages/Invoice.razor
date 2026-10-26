@@ -1,6 +1,8 @@
 @page "/facturen/{OrderId}"
 @using Microsoft.EntityFrameworkCore
+@using Microsoft.Extensions.Caching.Memory
 @using Microsoft.Extensions.Options
+@using OrderSync.Clients
 @using OrderSync.Data
 @using OrderSync.MockShop
 @using OrderSync.Models
@@ -12,6 +14,8 @@
 @inject IOptions<MoneybirdOptions> MoneybirdOptions
 @inject IHttpContextAccessor HttpContextAccessor
 @inject AdminAuthService AdminAuth
+@inject IMoneybirdClient MoneybirdClient
+@inject IMemoryCache Cache
 
 <PageTitle>Factuur @OrderId – OrderSync</PageTitle>
 
@@ -65,6 +69,18 @@
                 <Icon Name="check-circle" />
                 <span>Deze factuur is automatisch door OrderSync in Moneybird aangemaakt op @Display.DateAndTime(order.SyncedAt). Zo ziet de klant hem straks.</span>
             </div>
+            @if (_moneybirdDetails is not null)
+            {
+                <div class="notice notice-info" style="font-size: 0.875rem;">
+                    <Icon Name="external" Size="15" />
+                    <span>
+                        <strong>Opgehaald uit Moneybird</strong> &nbsp;·&nbsp;
+                        Factuur-ID <span class="mono">@(_moneybirdDetails.InvoiceId ?? order.MoneybirdInvoiceId)</span>
+                        &nbsp;·&nbsp; Status: @_moneybirdDetails.StateLabel
+                        &nbsp;·&nbsp; Aangemaakt: @Display.DateAndTime(_moneybirdDetails.CreatedAt)
+                    </span>
+                </div>
+            }
         }
         else
         {
@@ -139,11 +155,14 @@
 @code {
     [Parameter] public string OrderId { get; set; } = "";
 
+    private static readonly TimeSpan DetailsCacheDuration = TimeSpan.FromMinutes(5);
+
     private SyncedOrder? order;
     private List<InvoiceLine> lines = [];
     private string? customerName;
     private DateOnly? invoiceDate;
     private bool _isAdmin;
+    private MoneybirdInvoiceDetails? _moneybirdDetails;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -170,6 +189,27 @@
                 .ToList();
             customerName = shopOrder.CustomerName;
             invoiceDate = DateOnly.FromDateTime(shopOrder.OrderDate.Date);
+        }
+
+        // Fetch live Moneybird details to confirm the invoice is real — only for truly synced invoices.
+        _moneybirdDetails = null;
+        if (order.Status == SyncStatus.Synced && order.MoneybirdInvoiceId is { } invoiceId && MoneybirdClient.IsConfigured)
+        {
+            var cacheKey = $"moneybird:invoice:{invoiceId}";
+            if (!Cache.TryGetValue(cacheKey, out MoneybirdInvoiceDetails? cached))
+            {
+                try
+                {
+                    cached = await MoneybirdClient.GetInvoiceAsync(invoiceId);
+                    Cache.Set(cacheKey, cached, DetailsCacheDuration);
+                }
+                catch
+                {
+                    // Silently skip if Moneybird is unavailable — don't break the invoice page.
+                    cached = null;
+                }
+            }
+            _moneybirdDetails = cached;
         }
     }
 
