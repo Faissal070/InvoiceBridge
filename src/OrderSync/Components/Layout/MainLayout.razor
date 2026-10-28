@@ -8,7 +8,7 @@
     <div class="container topbar-inner">
         <a class="brand" href="">
             <span class="brand-mark" aria-hidden="true"><Icon Name="sync" Size="16" /></span>
-            OrderSync
+            InvoiceBridge
         </a>
         <nav class="topnav" aria-label="Hoofdmenu">
             <NavLink href="" Match="NavLinkMatch.All">@L["Nav_HowItWorks"]</NavLink>
@@ -29,7 +29,7 @@
 <footer class="footer">
     <div class="container footer-inner">
         <span>@L["Footer_DemoNote"]</span>
-        <span>OrderSync</span>
+        <span>InvoiceBridge · Built by <a href="@LinkedInUrl" target="_blank" rel="noopener noreferrer">Faissal</a></span>
     </div>
 </footer>
 
@@ -39,5 +39,8 @@
 </div>
 
 @code {
+    // TODO: replace with your LinkedIn profile URL
+    private const string LinkedInUrl = "https://www.linkedin.com/in/your-profile/";
+
     private bool IsNl => HttpContextAccessor.HttpContext?.Request.Cookies["lang"] is not "en";
 }

@@ -49,15 +49,15 @@
   <data name="Status_Simulated" xml:space="preserve"><value>Simulated</value></data>
 
   <!-- Home – Hero -->
-  <data name="Home_PageTitle" xml:space="preserve"><value>OrderSync – webshop orders invoiced automatically</value></data>
+  <data name="Home_PageTitle" xml:space="preserve"><value>InvoiceBridge – webshop orders invoiced automatically</value></data>
   <data name="Hero_Eyebrow" xml:space="preserve"><value>Webshop + Moneybird, automatically connected</value></data>
   <data name="Hero_Title" xml:space="preserve"><value>Every webshop order automatically an invoice in Moneybird</value></data>
-  <data name="Hero_Lead" xml:space="preserve"><value>No more typing orders manually. OrderSync sees new orders come in and turns them into invoices within seconds. Even evenings and weekends.</value></data>
+  <data name="Hero_Lead" xml:space="preserve"><value>No more typing orders manually. InvoiceBridge sees new orders come in and turns them into invoices within seconds. Even evenings and weekends.</value></data>
   <data name="Hero_Btn_Demo" xml:space="preserve"><value>View the live demo</value></data>
   <data name="Hero_Btn_HowItWorks" xml:space="preserve"><value>How it works</value></data>
   <data name="Hero_Note" xml:space="preserve"><value>Every order is invoiced exactly once.</value></data>
   <data name="Hero_Flow_NewOrder" xml:space="preserve"><value>New order</value></data>
-  <data name="Hero_Flow_Processing" xml:space="preserve"><value>OrderSync processes</value></data>
+  <data name="Hero_Flow_Processing" xml:space="preserve"><value>InvoiceBridge processes</value></data>
   <data name="Hero_Flow_ProcessingDesc" xml:space="preserve"><value>Look up or create customer, copy lines</value></data>
   <data name="Hero_Flow_Ready" xml:space="preserve"><value>Invoice ready in Moneybird</value></data>
   <data name="Hero_Flow_ReadyDesc" xml:space="preserve"><value>As a draft, ready to send</value></data>
@@ -78,7 +78,7 @@
   <data name="HowItWorks_Desc" xml:space="preserve"><value>You connect your webshop to Moneybird once. After that, every order goes through the same three steps.</value></data>
   <data name="Step_Number" xml:space="preserve"><value>STEP {0}</value></data>
   <data name="Step1_Title" xml:space="preserve"><value>Customer orders in your webshop</value></data>
-  <data name="Step1_Desc" xml:space="preserve"><value>OrderSync checks every few minutes for new orders. You don't have to do anything.</value></data>
+  <data name="Step1_Desc" xml:space="preserve"><value>InvoiceBridge checks every few minutes for new orders. You don't have to do anything.</value></data>
   <data name="Step2_Title" xml:space="preserve"><value>The invoice is created</value></data>
   <data name="Step2_Desc" xml:space="preserve"><value>Customer details, products, quantities and prices are copied exactly into Moneybird.</value></data>
   <data name="Step3_Title" xml:space="preserve"><value>Ready to send</value></data>
@@ -88,9 +88,9 @@
   <data name="Trust_Title" xml:space="preserve"><value>Built to rely on</value></data>
   <data name="Trust_Desc" xml:space="preserve"><value>An integration is only good if you don't need to think about it anymore.</value></data>
   <data name="Trust1_Title" xml:space="preserve"><value>Never duplicate invoices</value></data>
-  <data name="Trust1_Desc" xml:space="preserve"><value>Even after an outage or restart, OrderSync first checks if the invoice already exists.</value></data>
+  <data name="Trust1_Desc" xml:space="preserve"><value>Even after an outage or restart, InvoiceBridge first checks if the invoice already exists.</value></data>
   <data name="Trust2_Title" xml:space="preserve"><value>Outages are handled</value></data>
-  <data name="Trust2_Desc" xml:space="preserve"><value>If the webshop or Moneybird is temporarily unavailable, OrderSync automatically retries.</value></data>
+  <data name="Trust2_Desc" xml:space="preserve"><value>If the webshop or Moneybird is temporarily unavailable, InvoiceBridge automatically retries.</value></data>
   <data name="Trust3_Title" xml:space="preserve"><value>Always insight</value></data>
   <data name="Trust3_Desc" xml:space="preserve"><value>You can see for each order whether it was invoiced, and if not, why not, in plain language.</value></data>
 
@@ -100,10 +100,10 @@
   <data name="CTA_Btn" xml:space="preserve"><value>Start the live demo</value></data>
 
   <!-- Demo page -->
-  <data name="Demo_PageTitle" xml:space="preserve"><value>Live demo – OrderSync</value></data>
+  <data name="Demo_PageTitle" xml:space="preserve"><value>Live demo – InvoiceBridge</value></data>
   <data name="Demo_Eyebrow" xml:space="preserve"><value>Live demo</value></data>
   <data name="Demo_Title" xml:space="preserve"><value>From order to invoice, live</value></data>
-  <data name="Demo_Lead" xml:space="preserve"><value>Place a test order in the sample webshop and see how OrderSync turns it into an invoice within seconds.</value></data>
+  <data name="Demo_Lead" xml:space="preserve"><value>Place a test order in the sample webshop and see how InvoiceBridge turns it into an invoice within seconds.</value></data>
   <data name="Demo_TryTitle" xml:space="preserve"><value>Try it yourself</value></data>
   <data name="Demo_TryDesc" xml:space="preserve"><value>Choose what you want to see: a normal order, or an order where the webshop briefly falters.</value></data>
   <data name="Demo_NotConfigured" xml:space="preserve"><value>The demo is temporarily unavailable: no invoices can be created at the moment. Feel free to view the invoices below.</value></data>
@@ -112,10 +112,10 @@
   <data name="Demo_Btn_TestOutage" xml:space="preserve"><value>Test with an outage</value></data>
   <data name="Timeline_Step1_Title" xml:space="preserve"><value>Order comes in</value></data>
   <data name="Timeline_Step1_Desc" xml:space="preserve"><value>A fictitious customer orders in the webshop.</value></data>
-  <data name="Timeline_Step2_Title" xml:space="preserve"><value>OrderSync creates the invoice</value></data>
+  <data name="Timeline_Step2_Title" xml:space="preserve"><value>InvoiceBridge creates the invoice</value></data>
   <data name="Timeline_Step2_Title_Failed" xml:space="preserve"><value>Didn't work this time</value></data>
   <data name="Timeline_Step2_Desc" xml:space="preserve"><value>Look up customer in Moneybird and copy the invoice lines.</value></data>
-  <data name="Timeline_Step2_Desc_Failed" xml:space="preserve"><value>OrderSync will automatically retry, or you can do it now.</value></data>
+  <data name="Timeline_Step2_Desc_Failed" xml:space="preserve"><value>InvoiceBridge will automatically retry, or you can do it now.</value></data>
   <data name="Timeline_Step2_RetryBtn" xml:space="preserve"><value>Retry now</value></data>
   <data name="Timeline_Step3_Title" xml:space="preserve"><value>Invoice is ready</value></data>
   <data name="Timeline_Step3_Elapsed" xml:space="preserve"><value>Invoiced in {0:0.0} seconds. Without typing anything.</value></data>
@@ -138,7 +138,7 @@
   <data name="Orders_NotProcessed" xml:space="preserve"><value>Not yet processed</value></data>
   <data name="Orders_Invoice_Link" xml:space="preserve"><value>Invoice</value></data>
   <data name="Orders_Retry_Btn" xml:space="preserve"><value>Try again</value></data>
-  <data name="Orders_AutoRetry" xml:space="preserve"><value>OrderSync will automatically retry (attempt {0} of {1}).</value></data>
+  <data name="Orders_AutoRetry" xml:space="preserve"><value>InvoiceBridge will automatically retry (attempt {0} of {1}).</value></data>
   <data name="Orders_AutoRetry_Stopped" xml:space="preserve"><value>Automatic retry has stopped; try manually.</value></data>
   <data name="Orders_ShowMore" xml:space="preserve"><value>Show more orders</value></data>
   <data name="Notice_PlaceOrder_Error" xml:space="preserve"><value>Something went wrong while placing the order. Please try again.</value></data>
@@ -147,7 +147,7 @@
   <data name="Notice_Retry_Error" xml:space="preserve"><value>Retry failed. Please try again.</value></data>
 
   <!-- Invoice page -->
-  <data name="Invoice_PageTitle" xml:space="preserve"><value>Invoice {0} – OrderSync</value></data>
+  <data name="Invoice_PageTitle" xml:space="preserve"><value>Invoice {0} – InvoiceBridge</value></data>
   <data name="Invoice_Back" xml:space="preserve"><value>Back to the live demo</value></data>
   <data name="Invoice_OpenMoneybird" xml:space="preserve"><value>Open in Moneybird</value></data>
   <data name="Invoice_NotFound_Title" xml:space="preserve"><value>Invoice not found</value></data>
@@ -157,7 +157,7 @@
   <data name="Invoice_NotReady_Desc" xml:space="preserve"><value>Order {0} has not been invoiced yet.</value></data>
   <data name="Invoice_Loading_Title" xml:space="preserve"><value>Invoice details are being retrieved</value></data>
   <data name="Invoice_Loading_Desc" xml:space="preserve"><value>This invoice is in Moneybird, but the details are not yet available here. Try again in a few minutes.</value></data>
-  <data name="Invoice_Synced_Notice" xml:space="preserve"><value>This invoice was automatically created by OrderSync in Moneybird on {0}. This is how the customer will see it.</value></data>
+  <data name="Invoice_Synced_Notice" xml:space="preserve"><value>This invoice was automatically created by InvoiceBridge in Moneybird on {0}. This is how the customer will see it.</value></data>
   <data name="Invoice_Moneybird_Heading" xml:space="preserve"><value>Fetched from Moneybird</value></data>
   <data name="Invoice_Moneybird_Status" xml:space="preserve"><value>Status:</value></data>
   <data name="Invoice_Moneybird_Created" xml:space="preserve"><value>Created:</value></data>
@@ -177,7 +177,7 @@
   <data name="Invoice_ID_Label" xml:space="preserve"><value>Invoice ID</value></data>
 
   <!-- Admin page -->
-  <data name="Admin_PageTitle" xml:space="preserve"><value>Admin – OrderSync</value></data>
+  <data name="Admin_PageTitle" xml:space="preserve"><value>Admin – InvoiceBridge</value></data>
   <data name="Admin_Eyebrow" xml:space="preserve"><value>Admin</value></data>
   <data name="Admin_Title" xml:space="preserve"><value>Log in as admin</value></data>
   <data name="Admin_Desc" xml:space="preserve"><value>Enter the admin code to activate the admin view.</value></data>
