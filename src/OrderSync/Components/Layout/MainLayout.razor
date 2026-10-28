@@ -15,8 +15,9 @@
             <NavLink href="demo" class="topnav-cta">@L["Nav_LiveDemo"]</NavLink>
         </nav>
         <div class="lang-switcher" aria-label="Taal / Language">
-            <a href="/set-culture/nl" class="lang-btn @(IsNl ? "lang-btn-active" : null)">NL</a>
-            <a href="/set-culture/en" class="lang-btn @(!IsNl ? "lang-btn-active" : null)">EN</a>
+            @* Full page load: enhanced navigation would keep interactive components on the old culture. *@
+            <a href="/set-culture/nl" data-enhance-nav="false" class="lang-btn @(IsNl ? "lang-btn-active" : null)">NL</a>
+            <a href="/set-culture/en" data-enhance-nav="false" class="lang-btn @(!IsNl ? "lang-btn-active" : null)">EN</a>
         </div>
     </div>
 </header>
