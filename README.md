@@ -37,13 +37,16 @@ Many small webshops still retype every order into their accounting software: cus
 ## Architecture
 
 ```mermaid
-flowchart LR
-    Shop["Webshop<br/>(mock API)"] -->|new orders| Worker["Sync worker<br/>(BackgroundService)"]
-    Worker --> Service["Invoicing service<br/>retries · idempotency · simulation"]
-    Service -->|contacts & invoices| Moneybird["Moneybird API"]
+flowchart TD
+    Shop["Webshop<br/>mock API"] -->|new orders| Worker["Sync worker<br/>BackgroundService"]
+    Worker --> Service["Invoicing service<br/>retries<br/>idempotency"]
+    Service -->|invoices| Moneybird["Moneybird API"]
+    Service --> Sim["Simulation fallback<br/>402 / limit"]
     Service --> Db[("SQLite")]
-    Db --> Dashboard["Blazor dashboard<br/>live demo · admin"]
-    Dashboard -->|place demo order| Shop
+    Sim --> Db
+    Db --> Dashboard["Dashboard<br/>Blazor"]
+    Dashboard -->|retry| Service
+    Dashboard -->|demo order| Shop
 ```
 
 ## Running locally
