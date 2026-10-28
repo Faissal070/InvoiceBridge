@@ -1,0 +1,500 @@
+@page "/demo"
+@page "/dashboard"
+@rendermode InteractiveServer
+@implements IDisposable
+@using System.Diagnostics
+@using System.Globalization
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.Extensions.Options
+@using InvoiceBridge.Data
+@using InvoiceBridge.MockShop
+@using InvoiceBridge.Models
+@using InvoiceBridge.Options
+@using InvoiceBridge.Services
+@inject IServiceScopeFactory ScopeFactory
+@inject IOptions<MoneybirdOptions> MoneybirdOptions
+@inject IOptions<DemoOptions> DemoOptions
+@inject OrderChangeNotifier Notifier
+@inject VisitorContext Visitor
+@inject MockOrderStore Shop
+@inject TimeProvider Time
+@inject ILogger<Demo> Logger
+@inject IHttpContextAccessor HttpContextAccessor
+@inject AdminAuthService AdminAuth
+@inject SandboxSimulationService SimulationService
+@inject PersistentComponentState AppState
+@inject IStringLocalizer<SharedResources> L
+
+<PageTitle>@L["Demo_PageTitle"]</PageTitle>
+
+<div class="page-header">
+    <span class="eyebrow"><Icon Name="bolt" Size="14" /> @L["Demo_Eyebrow"]</span>
+    <h1>@L["Demo_Title"]</h1>
+    <p>@L["Demo_Lead"]</p>
+</div>
+
+<div class="demo-grid">
+    <section class="card card-body" aria-labelledby="try-title">
+        <h2 id="try-title" class="card-title">@L["Demo_TryTitle"]</h2>
+        <p class="muted mt-xs">@L["Demo_TryDesc"]</p>
+
+        @if (!MoneybirdOptions.Value.IsConfigured)
+        {
+            <div class="notice notice-info mt-md">
+                <Icon Name="info" />
+                <span>@L["Demo_NotConfigured"]</span>
+            </div>
+        }
+        else if (!_isAdmin && SimulationService.IsSimulating)
+        {
+            <div class="notice notice-info mt-md">
+                <Icon Name="info" />
+                <span>@L["Demo_SimulationNotice"]</span>
+            </div>
+        }
+
+        <div class="try-actions">
+            <button class="btn btn-primary btn-lg" @onclick="() => PlaceOrderAsync(simulateOutage: false)" disabled="@(busy || !MoneybirdOptions.Value.IsConfigured)">
+                <Icon Name="plus" /> @L["Demo_Btn_PlaceOrder"]
+            </button>
+            <button class="btn btn-secondary btn-lg" @onclick="() => PlaceOrderAsync(simulateOutage: true)" disabled="@(busy || !MoneybirdOptions.Value.IsConfigured)">
+                <Icon Name="alert" /> @L["Demo_Btn_TestOutage"]
+            </button>
+        </div>
+
+        @if (notice is not null)
+        {
+            <div class="notice notice-@notice.Tone mt-md" role="status">
+                <Icon Name="@(notice.Tone == "success" ? "check-circle" : notice.Tone == "info" ? "info" : "alert")" />
+                <span>@notice.Text</span>
+            </div>
+        }
+
+        <ol class="timeline" aria-live="polite">
+            <li class="timeline-step @StepClass(1)">
+                <span class="timeline-marker">@StepMarker(1)</span>
+                <div class="timeline-text">
+                    <strong>@L["Timeline_Step1_Title"]</strong>
+                    @if (run is not null)
+                    {
+                        <span><span class="mono">@run.Order.OrderId</span> · @run.Order.CustomerName · @Display.Amount(run.Order.Total)</span>
+                    }
+                    else
+                    {
+                        <span>@L["Timeline_Step1_Desc"]</span>
+                    }
+                </div>
+            </li>
+            <li class="timeline-step @StepClass(2)">
+                <span class="timeline-marker">@StepMarker(2)</span>
+                <div class="timeline-text">
+                    <strong>@(run?.Step == DemoStep.Failed ? L["Timeline_Step2_Title_Failed"].Value : L["Timeline_Step2_Title"].Value)</strong>
+                    @if (run?.Step == DemoStep.Failed)
+                    {
+                        <span>@run.Error @L["Timeline_Step2_Desc_Failed"]</span>
+                        <div class="actions">
+                            <button class="btn btn-secondary btn-sm" @onclick="() => RetryAsync(run.SyncedOrderId, run.Order.OrderId)" disabled="@busy">
+                                <Icon Name="sync" Size="16" /> @L["Timeline_Step2_RetryBtn"]
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <span>@L["Timeline_Step2_Desc"]</span>
+                    }
+                </div>
+            </li>
+            <li class="timeline-step @StepClass(3)">
+                <span class="timeline-marker">@StepMarker(3)</span>
+                <div class="timeline-text">
+                    <strong>@L["Timeline_Step3_Title"]</strong>
+                    @if (run?.Step == DemoStep.Done)
+                    {
+                        <span>@(run.Elapsed is { } elapsed ? L["Timeline_Step3_Elapsed", elapsed.TotalSeconds].Value : L["Timeline_Step3_Retried"].Value)</span>
+                        <div class="actions">
+                            <a class="link-arrow" href="@InvoiceHref(run.Order.OrderId)">@L["Timeline_Step3_ViewInvoice"] <Icon Name="arrow-right" Size="16" /></a>
+                        </div>
+                    }
+                    else
+                    {
+                        <span>@L["Timeline_Step3_Desc"]</span>
+                    }
+                </div>
+            </li>
+        </ol>
+
+        <p class="try-hint">@L["Demo_Hint", DemoOptions.Value.VisitorWindowMinutes]</p>
+    </section>
+
+    <section class="stat-tiles" aria-label="Overzicht">
+        @if (_isAdmin)
+        {
+            var limit = MoneybirdOptions.Value.SandboxInvoiceLimit;
+            var pct = limit > 0 ? (double)_syncedThisMonth / limit : 1.0;
+            var tone = pct >= 1.0 ? "danger" : pct >= 0.7 ? "warning" : "info";
+            <div class="card stat-tile stat-tile-wide">
+                <span class="icon-badge icon-badge-@tone"><Icon Name="invoice" /></span>
+                <div class="stat">
+                    <span class="stat-value">@_syncedThisMonth / @limit</span>
+                    <span class="stat-note">@L["Admin_SandboxNote"]@(SimulationService.IsSimulating ? L["Admin_SimulationActive"].Value : null)</span>
+                </div>
+            </div>
+        }
+        @foreach (var status in TileStatuses)
+        {
+            <div class="card stat-tile">
+                <StatusBadge Status="status" />
+                <span class="stat-value">@counts.GetValueOrDefault(status)</span>
+            </div>
+        }
+        <div class="card stat-tile stat-tile-wide">
+            <span class="icon-badge icon-badge-success"><Icon Name="clock" /></span>
+            <div class="stat">
+                <span class="stat-value">@Display.Duration(counts.GetValueOrDefault(SyncStatus.Synced) * DemoOptions.Value.MinutesSavedPerInvoice)</span>
+                <span class="stat-note">@L["WorkSaved_Note", DemoOptions.Value.MinutesSavedPerInvoice]</span>
+            </div>
+        </div>
+    </section>
+</div>
+
+<section class="card" aria-labelledby="orders-title">
+    <div class="card-header">
+        <h2 id="orders-title" class="card-title">@L["Orders_Title"]</h2>
+        <span class="live"><span class="live-dot" aria-hidden="true"></span>@L["Orders_Live"]</span>
+    </div>
+
+    @if (orders is null)
+    {
+        <div class="empty-state"><span class="spinner subtle"></span><p>@L["Orders_Loading"]</p></div>
+    }
+    else if (orders.Count == 0)
+    {
+        <div class="empty-state">
+            <span class="icon-badge"><Icon Name="cart" /></span>
+            <h2>@L["Orders_Empty_Title"]</h2>
+            <p>@L["Orders_Empty_Desc"]</p>
+        </div>
+    }
+    else
+    {
+        <div class="orders-head" aria-hidden="true">
+            <span>@L["Orders_Col_Order"]</span><span>@L["Orders_Col_Amount"]</span><span>@L["Orders_Col_Status"]</span><span>@L["Orders_Col_When"]</span><span></span>
+        </div>
+        <ul class="orders">
+            @foreach (var order in orders.Take(visibleRows))
+            {
+                // Not invoiced yet: the snapshot is empty, so show what the webshop knows.
+                var shopOrder = order.CustomerName is null ? Shop.Find(order.OrderId) : null;
+                <li @key="order.Id" class="order-row @(changedIds.Contains(order.Id) ? "is-new" : null)">
+                    <div class="order-main">
+                        <div class="order-id mono">@order.OrderId</div>
+                        <div class="order-customer">@(order.CustomerName ?? shopOrder?.CustomerName ?? L["Orders_NotProcessed"].Value)</div>
+                    </div>
+                    <div class="order-amount">@Display.Amount(order.Total ?? shopOrder?.Total)</div>
+                    <div class="order-status"><StatusBadge Status="order.Status" /></div>
+                    <div class="order-time">@Display.Relative(order.SyncedAt ?? order.LastAttemptAt ?? order.CreatedAt, Time.GetUtcNow())</div>
+                    <div class="order-action">
+                        @if (order.Status is SyncStatus.Synced or SyncStatus.Simulated)
+                        {
+                            <a class="link-arrow" href="@InvoiceHref(order.OrderId)">@L["Orders_Invoice_Link"] <Icon Name="arrow-right" Size="16" /></a>
+                            @if (_isAdmin && order.MoneybirdInvoiceId is not null && order.Status == SyncStatus.Synced)
+                            {
+                                <a class="link-arrow subtle" href="@MoneybirdUrl(order.MoneybirdInvoiceId)" target="_blank" rel="noopener">Moneybird <Icon Name="external" Size="14" /></a>
+                            }
+                        }
+                        else if (order.Status == SyncStatus.Failed)
+                        {
+                            <button class="btn btn-secondary btn-sm" @onclick="() => RetryAsync(order.Id, order.OrderId)" disabled="@busy">
+                                <Icon Name="sync" Size="16" /> @L["Orders_Retry_Btn"]
+                            </button>
+                        }
+                    </div>
+                    @if (order.Status == SyncStatus.Failed)
+                    {
+                        <div class="order-error">
+                            <Icon Name="alert" Size="16" />
+                            <span>
+                                @order.LastError
+                                @(order.Attempts < OrderInvoicingService.MaxAutomaticAttempts
+                                    ? L["Orders_AutoRetry", order.Attempts, OrderInvoicingService.MaxAutomaticAttempts].Value
+                                    : L["Orders_AutoRetry_Stopped"].Value)
+                            </span>
+                        </div>
+                    }
+                </li>
+            }
+        </ul>
+        @if (orders.Count > visibleRows)
+        {
+            <div class="orders-more">
+                <button class="btn btn-ghost btn-sm" @onclick="() => visibleRows = MaxRows">@L["Orders_ShowMore"]</button>
+            </div>
+        }
+    }
+</section>
+
+@code {
+    private const int MaxRows = 50;
+    private int visibleRows = 10;
+    private static readonly TimeSpan AutoRefreshInterval = TimeSpan.FromSeconds(15);
+    // Short pause so viewers can see the order arrive before it is invoiced.
+    private static readonly TimeSpan StepPause = TimeSpan.FromMilliseconds(700);
+    private static readonly SyncStatus[] TileStatuses = [SyncStatus.Synced, SyncStatus.Failed, SyncStatus.Processing, SyncStatus.Pending];
+
+    private enum DemoStep { Invoicing, Done, Failed }
+
+    private sealed class DemoRun(int syncedOrderId, MockOrder order)
+    {
+        public int SyncedOrderId { get; } = syncedOrderId;
+        public MockOrder Order { get; } = order;
+        public DemoStep Step { get; set; } = DemoStep.Invoicing;
+        public string? Error { get; set; }
+        public TimeSpan? Elapsed { get; set; }
+    }
+
+    private sealed record Notice(string Text, string Tone);
+
+    private List<SyncedOrder>? orders;
+    private Dictionary<SyncStatus, int> counts = [];
+    private readonly Dictionary<int, SyncStatus> seenStatuses = [];
+    private HashSet<int> changedIds = [];
+    private DemoRun? run;
+    private Notice? notice;
+    private bool busy;
+    private Timer? refreshTimer;
+    private int refreshQueued;
+    private bool _isAdmin;
+    private int _syncedThisMonth;
+    private PersistingComponentStateSubscription _persistSubscription;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _persistSubscription = AppState.RegisterOnPersisting(PersistState);
+
+        // Read admin status from the component state (after circuit connects) or from the cookie (during prerender).
+        if (!AppState.TryTakeFromJson<bool>("isAdmin", out var isAdmin))
+            isAdmin = AdminAuth.IsAdmin(HttpContextAccessor.HttpContext);
+        _isAdmin = isAdmin;
+
+        // Apply culture so IStringLocalizer and Display helpers use the right language in the interactive circuit.
+        if (!AppState.TryTakeFromJson<string>("lang", out var lang) || lang is null)
+            lang = HttpContextAccessor.HttpContext?.Request.Cookies["lang"] ?? "nl";
+        var culture = lang == "en" ? CultureInfo.GetCultureInfo("en") : CultureInfo.GetCultureInfo("nl-NL");
+        CultureInfo.CurrentCulture = culture;
+        CultureInfo.CurrentUICulture = culture;
+
+        await LoadAsync();
+        Notifier.Changed += OnOrdersChanged;
+        // Fallback in case a change notification is missed; also keeps "x min geleden" current.
+        refreshTimer = new Timer(_ => OnOrdersChanged(), null, AutoRefreshInterval, AutoRefreshInterval);
+    }
+
+    private Task PersistState()
+    {
+        AppState.PersistAsJson("isAdmin", _isAdmin);
+        AppState.PersistAsJson("lang", CultureInfo.CurrentUICulture.TwoLetterISOLanguageName);
+        return Task.CompletedTask;
+    }
+
+    public void Dispose()
+    {
+        _persistSubscription.Dispose();
+        Notifier.Changed -= OnOrdersChanged;
+        refreshTimer?.Dispose();
+    }
+
+    /// <summary>Reloads once for a burst of changes; called from other threads.</summary>
+    private void OnOrdersChanged()
+    {
+        if (Interlocked.Exchange(ref refreshQueued, 1) == 1)
+        {
+            return;
+        }
+
+        _ = InvokeAsync(async () =>
+        {
+            Volatile.Write(ref refreshQueued, 0);
+            try
+            {
+                await LoadAsync();
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Refreshing the demo page failed");
+            }
+        });
+    }
+
+    private async Task LoadAsync()
+    {
+        using var scope = ScopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<InvoiceBridgeDbContext>();
+        var latest = await db.SyncedOrders
+            .AsNoTracking()
+            .OrderByDescending(o => o.CreatedAt)
+            .ThenByDescending(o => o.OrderId)
+            .Take(MaxRows)
+            .ToListAsync();
+        counts = await db.SyncedOrders
+            .GroupBy(o => o.Status)
+            .Select(g => new { g.Key, Count = g.Count() })
+            .ToDictionaryAsync(g => g.Key, g => g.Count);
+
+        if (_isAdmin)
+        {
+            var firstOfMonth = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            _syncedThisMonth = await db.SyncedOrders
+                .CountAsync(o => o.Status == SyncStatus.Synced && o.SyncedAt >= firstOfMonth);
+        }
+
+        // Highlight rows that are new or changed status since the previous load (not on the first load).
+        changedIds = orders is null
+            ? []
+            : latest.Where(o => !seenStatuses.TryGetValue(o.Id, out var s) || s != o.Status).Select(o => o.Id).ToHashSet();
+        foreach (var o in latest)
+        {
+            seenStatuses[o.Id] = o.Status;
+        }
+        orders = latest;
+
+        UpdateRunFromOrders();
+    }
+
+    /// <summary>The worker or a retry may finish the current demo order; reflect that in the timeline.</summary>
+    private void UpdateRunFromOrders()
+    {
+        if (run is null || orders?.FirstOrDefault(o => o.Id == run.SyncedOrderId) is not { } order)
+        {
+            return;
+        }
+
+        switch (order.Status)
+        {
+            case SyncStatus.Synced or SyncStatus.Simulated when run.Step != DemoStep.Done:
+                run.Step = DemoStep.Done;
+                break;
+            case SyncStatus.Failed:
+                run.Step = DemoStep.Failed;
+                run.Error = order.LastError;
+                break;
+            case SyncStatus.Pending or SyncStatus.Processing when run.Step == DemoStep.Failed:
+                run.Step = DemoStep.Invoicing;
+                break;
+        }
+    }
+
+    private async Task PlaceOrderAsync(bool simulateOutage)
+    {
+        if (busy)
+        {
+            return;
+        }
+
+        busy = true;
+        notice = null;
+        try
+        {
+            using var scope = ScopeFactory.CreateScope();
+            var placed = await scope.ServiceProvider.GetRequiredService<DemoOrderService>()
+                .PlaceOrderAsync(Visitor.VisitorId, simulateOutage);
+            if (!placed.Accepted)
+            {
+                notice = new Notice(placed.RefusedReason!, "warning");
+                return;
+            }
+
+            run = new DemoRun(placed.SyncedOrderId!.Value, placed.Order!);
+            await LoadAsync();
+            StateHasChanged();
+            await Task.Delay(StepPause);
+
+            var stopwatch = Stopwatch.StartNew();
+            await scope.ServiceProvider.GetRequiredService<OrderInvoicingService>().InvoiceOrderAsync(run.SyncedOrderId);
+            run.Elapsed = stopwatch.Elapsed;
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Placing a demo order failed");
+            notice = new Notice(L["Notice_PlaceOrder_Error"], "danger");
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private async Task RetryAsync(int syncedOrderId, string orderId)
+    {
+        if (busy)
+        {
+            return;
+        }
+
+        busy = true;
+        notice = null;
+        try
+        {
+            using var scope = ScopeFactory.CreateScope();
+            var result = await scope.ServiceProvider.GetRequiredService<DemoOrderService>().RetryAsync(Visitor.VisitorId, syncedOrderId);
+            if (run?.SyncedOrderId == syncedOrderId)
+            {
+                run.Elapsed = null;
+            }
+            await LoadAsync();
+
+            // The timeline already tells the story for the current demo order.
+            if (run?.SyncedOrderId != syncedOrderId || !result.Attempted)
+            {
+                notice = result switch
+                {
+                    { Attempted: false } => new Notice(result.RefusedReason!, "info"),
+                    { Synced: true } => new Notice(L["Notice_Retry_Success", orderId], "success"),
+                    _ => new Notice(L["Notice_Retry_Failed", orderId], "danger")
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Retrying order {OrderId} failed", orderId);
+            notice = new Notice(L["Notice_Retry_Error"], "danger");
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private string StepClass(int step) => StepState(step) switch
+    {
+        "done" => "is-done",
+        "active" => "is-active",
+        "failed" => "is-failed",
+        _ => "is-pending"
+    };
+
+    private RenderFragment StepMarker(int step) => StepState(step) switch
+    {
+        "done" => @<Icon Name="check" Size="16" />,
+        "active" => @<span class="spinner"></span>,
+        "failed" => @<Icon Name="alert" Size="15" />,
+        _ => @<span>@step</span>
+    };
+
+    private string StepState(int step) => (step, run?.Step) switch
+    {
+        (_, null) => "pending",
+        (1, _) => "done",
+        (2, DemoStep.Invoicing) => "active",
+        (2, DemoStep.Failed) => "failed",
+        (2, DemoStep.Done) => "done",
+        (3, DemoStep.Done) => "done",
+        _ => "pending"
+    };
+
+    private static string InvoiceHref(string orderId) => $"facturen/{Uri.EscapeDataString(orderId)}";
+
+    private string MoneybirdUrl(string invoiceId) =>
+        $"https://moneybird.com/{Uri.EscapeDataString(MoneybirdOptions.Value.AdministrationId ?? "")}/sales_invoices/{Uri.EscapeDataString(invoiceId)}";
+}

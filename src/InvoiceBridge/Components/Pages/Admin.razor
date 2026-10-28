@@ -1,0 +1,48 @@
+@page "/admin"
+@using Microsoft.AspNetCore.Http
+@inject IHttpContextAccessor HttpContextAccessor
+@inject InvoiceBridge.Services.AdminAuthService AdminAuth
+@inject IStringLocalizer<SharedResources> L
+
+<PageTitle>@L["Admin_PageTitle"]</PageTitle>
+
+<div class="page-header">
+    <span class="eyebrow">@L["Admin_Eyebrow"]</span>
+    <h1>@L["Admin_Title"]</h1>
+    <p>@L["Admin_Desc"]</p>
+</div>
+
+<div style="max-width: 400px; margin: 0 auto;">
+    @if (AlreadyLoggedIn)
+    {
+        <div class="notice notice-success">
+            <Icon Name="check-circle" />
+            <span>@L["Admin_AlreadyLoggedIn"] <a href="/demo">@L["Admin_AlreadyLoggedIn_Link"]</a></span>
+        </div>
+    }
+
+    @if (ShowError)
+    {
+        <div class="notice notice-danger">
+            <Icon Name="alert" />
+            <span>@L["Admin_Error"]</span>
+        </div>
+    }
+
+    <form method="post" action="/admin/login" class="card card-body" style="margin-top: 1.5rem;">
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <label for="admin-code" style="font-weight: 500;">@L["Admin_CodeLabel"]</label>
+            <input id="admin-code" type="password" name="code" autocomplete="current-password" autofocus
+                   style="padding: 0.5rem 0.75rem; border: 1px solid var(--color-border); border-radius: 6px; font-size: 1rem;" />
+            <button type="submit" class="btn btn-primary">@L["Admin_LoginBtn"]</button>
+        </div>
+    </form>
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "error")]
+    public string? ErrorParam { get; set; }
+
+    private bool ShowError => ErrorParam == "1";
+    private bool AlreadyLoggedIn => AdminAuth.IsAdmin(HttpContextAccessor.HttpContext);
+}

@@ -1,0 +1,10 @@
+@using InvoiceBridge.Models
+@inject IStringLocalizer<SharedResources> L
+
+<span class="pill pill-@Display.Tone(Status)">
+    <span class="pill-dot" aria-hidden="true"></span>@L[$"Status_{Status}"]
+</span>
+
+@code {
+    [Parameter, EditorRequired] public SyncStatus Status { get; set; }
+}

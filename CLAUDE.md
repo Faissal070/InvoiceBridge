@@ -1,4 +1,4 @@
-\# OrderSync
+\# InvoiceBridge
 
 
 
@@ -12,7 +12,7 @@ Demo project: syncs webshop orders to Moneybird as invoices, with a Blazor dashb
 
 \- EF Core with SQLite
 
-\- Project lives in src/OrderSync
+\- Project lives in src/InvoiceBridge
 
 
 
@@ -56,25 +56,25 @@ Demo project: syncs webshop orders to Moneybird as invoices, with a Blazor dashb
 
 ## Project structure (always follow)
 
-Code in `src/OrderSync` is organized **by type**, not by feature.
-The namespace always matches the folder (`OrderSync.<Folder>`), one type per file.
+Code in `src/InvoiceBridge` is organized **by type**, not by feature.
+The namespace always matches the folder (`InvoiceBridge.<Folder>`), one type per file.
 
 | Folder | Namespace | Contains |
 |---|---|---|
-| `Clients/` | `OrderSync.Clients` | HTTP clients for external APIs, plus their interfaces (`IMoneybirdClient`, `MoneybirdClient`, `MockShopClient`) |
-| `Services/` | `OrderSync.Services` | Business logic (`OrderSyncService`, `OrderInvoicingService`) |
-| `Workers/` | `OrderSync.Workers` | `BackgroundService` implementations (`OrderSyncWorker`) |
-| `Models/` | `OrderSync.Models` | Entities, enums, DTOs and result records (`SyncedOrder`, `SyncStatus`, `MockOrder`, `MoneybirdInvoice`, ...) |
-| `Options/` | `OrderSync.Options` | Configuration classes bound from appsettings/user-secrets (`MoneybirdOptions`) |
-| `Exceptions/` | `OrderSync.Exceptions` | Custom exceptions (`MoneybirdException`) |
-| `Data/` | `OrderSync.Data` | `OrderSyncDbContext` and `Migrations/` only (entities go in `Models/`) |
-| `MockShop/` | `OrderSync.MockShop` | The fake webshop itself: minimal API endpoints and seed data |
-| `Components/` | `OrderSync.Components` | Blazor layout and pages |
+| `Clients/` | `InvoiceBridge.Clients` | HTTP clients for external APIs, plus their interfaces (`IMoneybirdClient`, `MoneybirdClient`, `MockShopClient`) |
+| `Services/` | `InvoiceBridge.Services` | Business logic (`OrderSyncService`, `OrderInvoicingService`) |
+| `Workers/` | `InvoiceBridge.Workers` | `BackgroundService` implementations (`OrderSyncWorker`) |
+| `Models/` | `InvoiceBridge.Models` | Entities, enums, DTOs and result records (`SyncedOrder`, `SyncStatus`, `MockOrder`, `MoneybirdInvoice`, ...) |
+| `Options/` | `InvoiceBridge.Options` | Configuration classes bound from appsettings/user-secrets (`MoneybirdOptions`) |
+| `Exceptions/` | `InvoiceBridge.Exceptions` | Custom exceptions (`MoneybirdException`) |
+| `Data/` | `InvoiceBridge.Data` | `InvoiceBridgeDbContext` and `Migrations/` only (entities go in `Models/`) |
+| `MockShop/` | `InvoiceBridge.MockShop` | The fake webshop itself: minimal API endpoints and seed data |
+| `Components/` | `InvoiceBridge.Components` | Blazor layout and pages |
 
 - New code goes in the folder for its type; do not create feature folders.
-- Tests in `tests/OrderSync.Tests` mirror this structure
-  (e.g. `Services/OrderInvoicingServiceTests.cs`, namespace `OrderSync.Tests.Services`).
-- Inside `OrderSync.*` namespaces, `Options` refers to the `OrderSync.Options` namespace.
+- Tests in `tests/InvoiceBridge.Tests` mirror this structure
+  (e.g. `Services/OrderInvoicingServiceTests.cs`, namespace `InvoiceBridge.Tests.Services`).
+- Inside `InvoiceBridge.*` namespaces, `Options` refers to the `InvoiceBridge.Options` namespace.
   Use `Microsoft.Extensions.Options.Options.Create(...)` fully qualified when needed.
 - When an entity moves namespace, update the type name in the EF migration snapshot and
   check with `dotnet ef migrations has-pending-model-changes` that no migration is needed.
