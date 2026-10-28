@@ -1,0 +1,149 @@
+﻿@page "/"
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.Extensions.Options
+@using InvoiceBridge.Data
+@using InvoiceBridge.Models
+@using InvoiceBridge.Options
+@inject InvoiceBridgeDbContext Db
+@inject IOptions<DemoOptions> DemoOptions
+@inject IStringLocalizer<SharedResources> L
+
+<PageTitle>@L["Home_PageTitle"]</PageTitle>
+
+<section class="hero">
+    <div class="hero-copy">
+        <span class="eyebrow"><Icon Name="bolt" Size="14" /> @L["Hero_Eyebrow"]</span>
+        <h1>@L["Hero_Title"]</h1>
+        <p class="hero-lead">@L["Hero_Lead"]</p>
+        <div class="hero-actions">
+            <a class="btn btn-primary btn-lg" href="demo">@L["Hero_Btn_Demo"] <Icon Name="arrow-right" /></a>
+            <a class="btn btn-secondary btn-lg" href="#zo-werkt-het">@L["Hero_Btn_HowItWorks"]</a>
+        </div>
+        <p class="hero-note"><Icon Name="shield" Size="16" /> @L["Hero_Note"]</p>
+    </div>
+
+    <div class="flow-backdrop">
+        <div class="flow" aria-label="@L["Hero_FlowLabel"]">
+            <div class="flow-item">
+                <span class="icon-badge"><Icon Name="cart" /></span>
+                <div class="grow">
+                    <strong>@L["Hero_Flow_NewOrder"]</strong>
+                    <small>@(example?.OrderId ?? "WS-20261021") · @(example?.CustomerName ?? "Sanne de Vries") · @Display.Amount(example?.Total ?? 31.93m)</small>
+                </div>
+            </div>
+            <div class="flow-connector" aria-hidden="true"><span></span></div>
+            <div class="flow-item">
+                <span class="icon-badge"><Icon Name="sync" /></span>
+                <div class="grow">
+                    <strong>@L["Hero_Flow_Processing"]</strong>
+                    <small>@L["Hero_Flow_ProcessingDesc"]</small>
+                </div>
+            </div>
+            <div class="flow-connector" aria-hidden="true"><span></span></div>
+            <div class="flow-item">
+                <span class="icon-badge icon-badge-success"><Icon Name="check" /></span>
+                <div class="grow">
+                    <strong>@L["Hero_Flow_Ready"]</strong>
+                    <small>@L["Hero_Flow_ReadyDesc"]</small>
+                </div>
+                <StatusBadge Status="SyncStatus.Synced" />
+            </div>
+            <p class="flow-caption">@(example is null ? L["Hero_Flow_Example"].Value : L["Hero_Flow_Latest"].Value)</p>
+        </div>
+    </div>
+</section>
+
+<section class="grid-3" aria-label="Resultaten in deze demo">
+    <div class="card card-body stat">
+        <span class="stat-value">@invoiced</span>
+        <span class="stat-label">@L["Stats_InvoicesCreated"]</span>
+        <span class="stat-note">@L["Stats_InvoicesNote"]</span>
+    </div>
+    <div class="card card-body stat">
+        <span class="stat-value">@Display.Duration(invoiced * DemoOptions.Value.MinutesSavedPerInvoice)</span>
+        <span class="stat-label">@L["Stats_WorkSaved"]</span>
+        <span class="stat-note">@L["Stats_WorkSavedNote", DemoOptions.Value.MinutesSavedPerInvoice]</span>
+    </div>
+    <div class="card card-body stat">
+        <span class="stat-value">0</span>
+        <span class="stat-label">@L["Stats_ManualSteps"]</span>
+        <span class="stat-note">@L["Stats_ManualStepsNote"]</span>
+    </div>
+</section>
+
+<section class="section" id="zo-werkt-het">
+    <div class="section-head">
+        <h2>@L["HowItWorks_Title"]</h2>
+        <p>@L["HowItWorks_Desc"]</p>
+    </div>
+    <div class="grid-3">
+        <div class="card card-body step">
+            <div class="step-top"><span class="icon-badge"><Icon Name="cart" /></span><span class="step-number">@L["Step_Number", 1]</span></div>
+            <h3>@L["Step1_Title"]</h3>
+            <p>@L["Step1_Desc"]</p>
+        </div>
+        <div class="card card-body step">
+            <div class="step-top"><span class="icon-badge"><Icon Name="sync" /></span><span class="step-number">@L["Step_Number", 2]</span></div>
+            <h3>@L["Step2_Title"]</h3>
+            <p>@L["Step2_Desc"]</p>
+        </div>
+        <div class="card card-body step">
+            <div class="step-top"><span class="icon-badge icon-badge-success"><Icon Name="invoice" /></span><span class="step-number">@L["Step_Number", 3]</span></div>
+            <h3>@L["Step3_Title"]</h3>
+            <p>@L["Step3_Desc"]</p>
+        </div>
+    </div>
+</section>
+
+<section class="section flush-top">
+    <div class="section-head">
+        <h2>@L["Trust_Title"]</h2>
+        <p>@L["Trust_Desc"]</p>
+    </div>
+    <div class="grid-3">
+        <div class="benefit">
+            <span class="icon-badge"><Icon Name="shield" /></span>
+            <div>
+                <h3>@L["Trust1_Title"]</h3>
+                <p>@L["Trust1_Desc"]</p>
+            </div>
+        </div>
+        <div class="benefit">
+            <span class="icon-badge"><Icon Name="sync" /></span>
+            <div>
+                <h3>@L["Trust2_Title"]</h3>
+                <p>@L["Trust2_Desc"]</p>
+            </div>
+        </div>
+        <div class="benefit">
+            <span class="icon-badge"><Icon Name="check-circle" /></span>
+            <div>
+                <h3>@L["Trust3_Title"]</h3>
+                <p>@L["Trust3_Desc"]</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="cta-band">
+    <div>
+        <h2>@L["CTA_Title"]</h2>
+        <p>@L["CTA_Desc"]</p>
+    </div>
+    <a class="btn btn-lg" href="demo">@L["CTA_Btn"] <Icon Name="arrow-right" /></a>
+</section>
+
+@code {
+    private int invoiced;
+    private SyncedOrder? example;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var synced = Db.SyncedOrders.AsNoTracking().Where(o => o.Status == SyncStatus.Synced);
+        invoiced = await synced.CountAsync();
+        example = await synced
+            .Where(o => o.CustomerName != null)
+            .OrderByDescending(o => o.SyncedAt)
+            .FirstOrDefaultAsync();
+    }
+}

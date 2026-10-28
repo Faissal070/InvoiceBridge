@@ -53,7 +53,7 @@ flowchart LR
 Secrets are never stored in the repository. Set them with user-secrets:
 
 ```bash
-cd src/OrderSync
+cd src/InvoiceBridge
 dotnet user-secrets set "Moneybird:Token" "<your-moneybird-api-token>"
 dotnet user-secrets set "Moneybird:AdministrationId" "<your-administration-id>"
 dotnet user-secrets set "Admin:AdminCode" "<choose-an-admin-code>"
@@ -62,7 +62,7 @@ dotnet user-secrets set "Admin:AdminCode" "<choose-an-admin-code>"
 Then run the app:
 
 ```bash
-dotnet run --project src/OrderSync
+dotnet run --project src/InvoiceBridge
 ```
 
 Open <http://localhost:5168>. The database is created and migrated on startup. Without Moneybird secrets the app still starts, but invoicing is disabled.
