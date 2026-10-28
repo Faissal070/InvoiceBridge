@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+
+  <!-- Layout -->
+  <data name="SkipToContent" xml:space="preserve"><value>Naar de inhoud</value></data>
+  <data name="Nav_HowItWorks" xml:space="preserve"><value>Hoe het werkt</value></data>
+  <data name="Nav_LiveDemo" xml:space="preserve"><value>Live demo</value></data>
+  <data name="Footer_DemoNote" xml:space="preserve"><value>Demo met fictieve gegevens. Facturen zijn concepten in een testadministratie.</value></data>
+  <data name="Error_Message" xml:space="preserve"><value>Er ging iets mis.</value></data>
+  <data name="Error_Reload" xml:space="preserve"><value>Pagina opnieuw laden</value></data>
+  <data name="Error_Dismiss" xml:space="preserve"><value>Sluiten</value></data>
+  <data name="Lang_NL" xml:space="preserve"><value>NL</value></data>
+  <data name="Lang_EN" xml:space="preserve"><value>EN</value></data>
+
+  <!-- Status labels -->
+  <data name="Status_Pending" xml:space="preserve"><value>Wachtend</value></data>
+  <data name="Status_Processing" xml:space="preserve"><value>Bezig</value></data>
+  <data name="Status_Synced" xml:space="preserve"><value>Gefactureerd</value></data>
+  <data name="Status_Failed" xml:space="preserve"><value>Mislukt</value></data>
+  <data name="Status_Simulated" xml:space="preserve"><value>Gesimuleerd</value></data>
+
+  <!-- Home – Hero -->
+  <data name="Home_PageTitle" xml:space="preserve"><value>OrderSync – webshopbestellingen automatisch gefactureerd</value></data>
+  <data name="Hero_Eyebrow" xml:space="preserve"><value>Webshop + Moneybird, automatisch gekoppeld</value></data>
+  <data name="Hero_Title" xml:space="preserve"><value>Elke webshopbestelling automatisch een factuur in Moneybird</value></data>
+  <data name="Hero_Lead" xml:space="preserve"><value>Geen bestellingen meer overtypen. OrderSync ziet nieuwe bestellingen binnenkomen en zet ze binnen enkele seconden klaar als factuur. Ook 's avonds en in het weekend.</value></data>
+  <data name="Hero_Btn_Demo" xml:space="preserve"><value>Bekijk de live demo</value></data>
+  <data name="Hero_Btn_HowItWorks" xml:space="preserve"><value>Zo werkt het</value></data>
+  <data name="Hero_Note" xml:space="preserve"><value>Elke bestelling wordt precies één keer gefactureerd.</value></data>
+  <data name="Hero_Flow_NewOrder" xml:space="preserve"><value>Nieuwe bestelling</value></data>
+  <data name="Hero_Flow_Processing" xml:space="preserve"><value>OrderSync verwerkt</value></data>
+  <data name="Hero_Flow_ProcessingDesc" xml:space="preserve"><value>Klant opzoeken of aanmaken, regels overnemen</value></data>
+  <data name="Hero_Flow_Ready" xml:space="preserve"><value>Factuur klaar in Moneybird</value></data>
+  <data name="Hero_Flow_ReadyDesc" xml:space="preserve"><value>Als concept, klaar om te versturen</value></data>
+  <data name="Hero_Flow_Example" xml:space="preserve"><value>Voorbeeld</value></data>
+  <data name="Hero_Flow_Latest" xml:space="preserve"><value>Laatst verwerkte bestelling in deze demo</value></data>
+  <data name="Hero_FlowLabel" xml:space="preserve"><value>Voorbeeld: van bestelling tot factuur</value></data>
+
+  <!-- Home – Stats -->
+  <data name="Stats_InvoicesCreated" xml:space="preserve"><value>Facturen automatisch gemaakt</value></data>
+  <data name="Stats_InvoicesNote" xml:space="preserve"><value>In deze demo, zonder dat iemand iets hoefde over te typen.</value></data>
+  <data name="Stats_WorkSaved" xml:space="preserve"><value>Werk bespaard</value></data>
+  <data name="Stats_WorkSavedNote" xml:space="preserve"><value>Schatting: {0} minuten handwerk per factuur.</value></data>
+  <data name="Stats_ManualSteps" xml:space="preserve"><value>Handmatige stappen</value></data>
+  <data name="Stats_ManualStepsNote" xml:space="preserve"><value>Van bestelling tot factuur gaat alles vanzelf.</value></data>
+
+  <!-- Home – How it works -->
+  <data name="HowItWorks_Title" xml:space="preserve"><value>Zo werkt het</value></data>
+  <data name="HowItWorks_Desc" xml:space="preserve"><value>Je koppelt je webshop één keer aan Moneybird. Daarna gaat elke bestelling dezelfde drie stappen door.</value></data>
+  <data name="Step_Number" xml:space="preserve"><value>STAP {0}</value></data>
+  <data name="Step1_Title" xml:space="preserve"><value>Klant bestelt in je webshop</value></data>
+  <data name="Step1_Desc" xml:space="preserve"><value>OrderSync kijkt elke paar minuten of er nieuwe bestellingen zijn. Je hoeft niets te doen.</value></data>
+  <data name="Step2_Title" xml:space="preserve"><value>De factuur wordt gemaakt</value></data>
+  <data name="Step2_Desc" xml:space="preserve"><value>Klantgegevens, producten, aantallen en prijzen worden precies overgenomen in Moneybird.</value></data>
+  <data name="Step3_Title" xml:space="preserve"><value>Klaar om te versturen</value></data>
+  <data name="Step3_Desc" xml:space="preserve"><value>De factuur staat als concept in Moneybird. Jij houdt de controle over wat er verstuurd wordt.</value></data>
+
+  <!-- Home – Trust -->
+  <data name="Trust_Title" xml:space="preserve"><value>Gebouwd om op te vertrouwen</value></data>
+  <data name="Trust_Desc" xml:space="preserve"><value>Een koppeling is pas fijn als je er niet meer naar hoeft om te kijken.</value></data>
+  <data name="Trust1_Title" xml:space="preserve"><value>Nooit dubbele facturen</value></data>
+  <data name="Trust1_Desc" xml:space="preserve"><value>Ook na een storing of herstart controleert OrderSync eerst of de factuur al bestaat.</value></data>
+  <data name="Trust2_Title" xml:space="preserve"><value>Storingen worden opgevangen</value></data>
+  <data name="Trust2_Desc" xml:space="preserve"><value>Is de webshop of Moneybird even niet bereikbaar? Dan probeert OrderSync het vanzelf opnieuw.</value></data>
+  <data name="Trust3_Title" xml:space="preserve"><value>Altijd inzicht</value></data>
+  <data name="Trust3_Desc" xml:space="preserve"><value>Je ziet per bestelling of die gefactureerd is, en zo niet, waarom niet, in gewone taal.</value></data>
+
+  <!-- Home – CTA -->
+  <data name="CTA_Title" xml:space="preserve"><value>Zie het zelf werken</value></data>
+  <data name="CTA_Desc" xml:space="preserve"><value>Plaats een testbestelling en kijk hoe die binnen een paar seconden een factuur wordt.</value></data>
+  <data name="CTA_Btn" xml:space="preserve"><value>Start de live demo</value></data>
+
+  <!-- Demo page -->
+  <data name="Demo_PageTitle" xml:space="preserve"><value>Live demo – OrderSync</value></data>
+  <data name="Demo_Eyebrow" xml:space="preserve"><value>Live demo</value></data>
+  <data name="Demo_Title" xml:space="preserve"><value>Van bestelling naar factuur, live</value></data>
+  <data name="Demo_Lead" xml:space="preserve"><value>Plaats een testbestelling in de voorbeeldwebshop en kijk hoe OrderSync er binnen een paar seconden een factuur van maakt.</value></data>
+  <data name="Demo_TryTitle" xml:space="preserve"><value>Probeer het zelf</value></data>
+  <data name="Demo_TryDesc" xml:space="preserve"><value>Kies wat je wilt zien: een normale bestelling, of een bestelling waarbij de webshop even hapert.</value></data>
+  <data name="Demo_NotConfigured" xml:space="preserve"><value>De demo is even niet beschikbaar: er kunnen nu geen facturen worden aangemaakt. Bekijk gerust de facturen hieronder.</value></data>
+  <data name="Demo_SimulationNotice" xml:space="preserve"><value>Demo-modus: nieuwe facturen worden gesimuleerd.</value></data>
+  <data name="Demo_Btn_PlaceOrder" xml:space="preserve"><value>Plaats een testbestelling</value></data>
+  <data name="Demo_Btn_TestOutage" xml:space="preserve"><value>Test met een storing</value></data>
+  <data name="Timeline_Step1_Title" xml:space="preserve"><value>Bestelling komt binnen</value></data>
+  <data name="Timeline_Step1_Desc" xml:space="preserve"><value>Een fictieve klant bestelt in de webshop.</value></data>
+  <data name="Timeline_Step2_Title" xml:space="preserve"><value>OrderSync maakt de factuur</value></data>
+  <data name="Timeline_Step2_Title_Failed" xml:space="preserve"><value>Even niet gelukt</value></data>
+  <data name="Timeline_Step2_Desc" xml:space="preserve"><value>Klant opzoeken in Moneybird en de factuurregels overnemen.</value></data>
+  <data name="Timeline_Step2_Desc_Failed" xml:space="preserve"><value>OrderSync probeert het vanzelf opnieuw, of je doet het nu zelf.</value></data>
+  <data name="Timeline_Step2_RetryBtn" xml:space="preserve"><value>Nu opnieuw proberen</value></data>
+  <data name="Timeline_Step3_Title" xml:space="preserve"><value>Factuur staat klaar</value></data>
+  <data name="Timeline_Step3_Elapsed" xml:space="preserve"><value>Gefactureerd in {0:0.0} seconden. Zonder iets over te typen.</value></data>
+  <data name="Timeline_Step3_Retried" xml:space="preserve"><value>Alsnog gefactureerd. Zonder iets over te typen.</value></data>
+  <data name="Timeline_Step3_ViewInvoice" xml:space="preserve"><value>Bekijk de factuur</value></data>
+  <data name="Timeline_Step3_Desc" xml:space="preserve"><value>Als concept in Moneybird, klaar om te versturen.</value></data>
+  <data name="Demo_Hint" xml:space="preserve"><value>Alle namen en bedragen zijn fictief. Je kunt een paar testbestellingen per {0} minuten plaatsen.</value></data>
+  <data name="Admin_SandboxNote" xml:space="preserve"><value>Moneybird sandbox-facturen deze maand</value></data>
+  <data name="Admin_SimulationActive" xml:space="preserve"><value> · simulatiemodus actief</value></data>
+  <data name="WorkSaved_Note" xml:space="preserve"><value>werk bespaard (schatting: {0} min per factuur)</value></data>
+  <data name="Orders_Title" xml:space="preserve"><value>Recente bestellingen</value></data>
+  <data name="Orders_Live" xml:space="preserve"><value>Live bijgewerkt</value></data>
+  <data name="Orders_Loading" xml:space="preserve"><value>Bestellingen laden…</value></data>
+  <data name="Orders_Empty_Title" xml:space="preserve"><value>Nog geen bestellingen</value></data>
+  <data name="Orders_Empty_Desc" xml:space="preserve"><value>Plaats hierboven een testbestelling om te beginnen.</value></data>
+  <data name="Orders_Col_Order" xml:space="preserve"><value>Bestelling</value></data>
+  <data name="Orders_Col_Amount" xml:space="preserve"><value>Bedrag</value></data>
+  <data name="Orders_Col_Status" xml:space="preserve"><value>Status</value></data>
+  <data name="Orders_Col_When" xml:space="preserve"><value>Wanneer</value></data>
+  <data name="Orders_NotProcessed" xml:space="preserve"><value>Nog niet verwerkt</value></data>
+  <data name="Orders_Invoice_Link" xml:space="preserve"><value>Factuur</value></data>
+  <data name="Orders_Retry_Btn" xml:space="preserve"><value>Opnieuw proberen</value></data>
+  <data name="Orders_AutoRetry" xml:space="preserve"><value>OrderSync probeert het automatisch opnieuw (poging {0} van {1}).</value></data>
+  <data name="Orders_AutoRetry_Stopped" xml:space="preserve"><value>Automatisch opnieuw proberen is gestopt; probeer het handmatig.</value></data>
+  <data name="Orders_ShowMore" xml:space="preserve"><value>Toon meer bestellingen</value></data>
+  <data name="Notice_PlaceOrder_Error" xml:space="preserve"><value>Er ging iets mis bij het plaatsen van de bestelling. Probeer het zo nog eens.</value></data>
+  <data name="Notice_Retry_Success" xml:space="preserve"><value>Bestelling {0} is alsnog gefactureerd.</value></data>
+  <data name="Notice_Retry_Failed" xml:space="preserve"><value>Bestelling {0} is opnieuw niet gelukt. De reden staat bij de bestelling.</value></data>
+  <data name="Notice_Retry_Error" xml:space="preserve"><value>Opnieuw proberen lukte niet. Probeer het zo nog eens.</value></data>
+
+  <!-- Invoice page -->
+  <data name="Invoice_PageTitle" xml:space="preserve"><value>Factuur {0} – OrderSync</value></data>
+  <data name="Invoice_Back" xml:space="preserve"><value>Terug naar de live demo</value></data>
+  <data name="Invoice_OpenMoneybird" xml:space="preserve"><value>Open in Moneybird</value></data>
+  <data name="Invoice_NotFound_Title" xml:space="preserve"><value>Factuur niet gevonden</value></data>
+  <data name="Invoice_NotFound_Desc" xml:space="preserve"><value>Er is geen bestelling met nummer {0}. Misschien is de link niet helemaal goed.</value></data>
+  <data name="Invoice_ToDemoBtn" xml:space="preserve"><value>Naar de live demo</value></data>
+  <data name="Invoice_NotReady_Title" xml:space="preserve"><value>Nog geen factuur</value></data>
+  <data name="Invoice_NotReady_Desc" xml:space="preserve"><value>Bestelling {0} is nog niet gefactureerd.</value></data>
+  <data name="Invoice_Loading_Title" xml:space="preserve"><value>Factuurgegevens worden opgehaald</value></data>
+  <data name="Invoice_Loading_Desc" xml:space="preserve"><value>Deze factuur staat in Moneybird, maar de details zijn hier nog niet bekend. Probeer het over een paar minuten opnieuw.</value></data>
+  <data name="Invoice_Synced_Notice" xml:space="preserve"><value>Deze factuur is automatisch door OrderSync in Moneybird aangemaakt op {0}. Zo ziet de klant hem straks.</value></data>
+  <data name="Invoice_Moneybird_Heading" xml:space="preserve"><value>Opgehaald uit Moneybird</value></data>
+  <data name="Invoice_Moneybird_Status" xml:space="preserve"><value>Status:</value></data>
+  <data name="Invoice_Moneybird_Created" xml:space="preserve"><value>Aangemaakt:</value></data>
+  <data name="Invoice_Simulated_Notice" xml:space="preserve"><value>Demo-modus: deze factuur is lokaal gesimuleerd en staat niet in Moneybird.</value></data>
+  <data name="Invoice_Simulated_Title" xml:space="preserve"><value>Gesimuleerde factuur</value></data>
+  <data name="Invoice_Draft_Title" xml:space="preserve"><value>Conceptfactuur</value></data>
+  <data name="Invoice_Ref" xml:space="preserve"><value>Referentie</value></data>
+  <data name="Invoice_Date" xml:space="preserve"><value>Factuurdatum</value></data>
+  <data name="Invoice_BillTo" xml:space="preserve"><value>Factuur aan</value></data>
+  <data name="Invoice_Col_Description" xml:space="preserve"><value>Omschrijving</value></data>
+  <data name="Invoice_Col_Qty" xml:space="preserve"><value>Aantal</value></data>
+  <data name="Invoice_Col_Price" xml:space="preserve"><value>Prijs</value></data>
+  <data name="Invoice_Col_Amount" xml:space="preserve"><value>Bedrag</value></data>
+  <data name="Invoice_Total" xml:space="preserve"><value>Totaal</value></data>
+  <data name="Invoice_VatNote" xml:space="preserve"><value>Bedragen zijn inclusief btw.</value></data>
+  <data name="Invoice_Footnote" xml:space="preserve"><value>Dit is een voorbeeld met fictieve gegevens. In Moneybird staat de factuur als concept, zodat jij bepaalt wanneer hij verstuurd wordt.</value></data>
+  <data name="Invoice_ID_Label" xml:space="preserve"><value>Factuur-ID</value></data>
+
+  <!-- Admin page -->
+  <data name="Admin_PageTitle" xml:space="preserve"><value>Beheerder – OrderSync</value></data>
+  <data name="Admin_Eyebrow" xml:space="preserve"><value>Beheer</value></data>
+  <data name="Admin_Title" xml:space="preserve"><value>Inloggen als beheerder</value></data>
+  <data name="Admin_Desc" xml:space="preserve"><value>Voer de beheerderscode in om de beheerdersweergave te activeren.</value></data>
+  <data name="Admin_AlreadyLoggedIn" xml:space="preserve"><value>Je bent al ingelogd als beheerder.</value></data>
+  <data name="Admin_AlreadyLoggedIn_Link" xml:space="preserve"><value>Naar de live demo</value></data>
+  <data name="Admin_Error" xml:space="preserve"><value>Onjuiste code. Probeer het opnieuw.</value></data>
+  <data name="Admin_CodeLabel" xml:space="preserve"><value>Beheerderscode</value></data>
+  <data name="Admin_LoginBtn" xml:space="preserve"><value>Inloggen</value></data>
+</root>

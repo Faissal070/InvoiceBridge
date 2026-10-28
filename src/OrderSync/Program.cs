@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components.Server.Circuits;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
 using OrderSync.Clients;
 using OrderSync.Components;
@@ -12,6 +13,7 @@ using OrderSync.Workers;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.AddLocalization(opts => opts.ResourcesPath = "Resources");
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
@@ -57,6 +59,12 @@ using (var scope = app.Services.CreateScope())
 
 // Configure the HTTP request pipeline.
 app.UseForwardedHeaders();
+app.UseRequestLocalization(new RequestLocalizationOptions()
+    .SetDefaultCulture("nl")
+    .AddSupportedCultures("nl", "en")
+    .AddSupportedUICultures("nl", "en")
+    .SetDefaultCulture("nl"));
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
@@ -67,6 +75,17 @@ app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages:
 app.UseHttpsRedirection();
 
 app.UseAntiforgery();
+
+app.MapGet("/set-culture/{lang}", (string lang, HttpContext ctx) =>
+{
+    var culture = lang == "en" ? "en" : "nl";
+    ctx.Response.Cookies.Append("lang", culture, new CookieOptions { MaxAge = TimeSpan.FromDays(365), IsEssential = true });
+    ctx.Response.Cookies.Append(CookieRequestCultureProvider.DefaultCookieName,
+        CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(culture)),
+        new CookieOptions { MaxAge = TimeSpan.FromDays(365), IsEssential = true });
+    var referer = ctx.Request.Headers.Referer.ToString();
+    return Results.Redirect(string.IsNullOrEmpty(referer) ? "/" : referer);
+});
 
 app.MapPost("/admin/login", (AdminAuthService auth, HttpContext ctx, [Microsoft.AspNetCore.Mvc.FromForm] string code) =>
 {
