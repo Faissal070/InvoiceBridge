@@ -49,15 +49,15 @@
   <data name="Status_Simulated" xml:space="preserve"><value>Gesimuleerd</value></data>
 
   <!-- Home – Hero -->
-  <data name="Home_PageTitle" xml:space="preserve"><value>OrderSync – webshopbestellingen automatisch gefactureerd</value></data>
+  <data name="Home_PageTitle" xml:space="preserve"><value>InvoiceBridge – webshopbestellingen automatisch gefactureerd</value></data>
   <data name="Hero_Eyebrow" xml:space="preserve"><value>Webshop + Moneybird, automatisch gekoppeld</value></data>
   <data name="Hero_Title" xml:space="preserve"><value>Elke webshopbestelling automatisch een factuur in Moneybird</value></data>
-  <data name="Hero_Lead" xml:space="preserve"><value>Geen bestellingen meer overtypen. OrderSync ziet nieuwe bestellingen binnenkomen en zet ze binnen enkele seconden klaar als factuur. Ook 's avonds en in het weekend.</value></data>
+  <data name="Hero_Lead" xml:space="preserve"><value>Geen bestellingen meer overtypen. InvoiceBridge ziet nieuwe bestellingen binnenkomen en zet ze binnen enkele seconden klaar als factuur. Ook 's avonds en in het weekend.</value></data>
   <data name="Hero_Btn_Demo" xml:space="preserve"><value>Bekijk de live demo</value></data>
   <data name="Hero_Btn_HowItWorks" xml:space="preserve"><value>Zo werkt het</value></data>
   <data name="Hero_Note" xml:space="preserve"><value>Elke bestelling wordt precies één keer gefactureerd.</value></data>
   <data name="Hero_Flow_NewOrder" xml:space="preserve"><value>Nieuwe bestelling</value></data>
-  <data name="Hero_Flow_Processing" xml:space="preserve"><value>OrderSync verwerkt</value></data>
+  <data name="Hero_Flow_Processing" xml:space="preserve"><value>InvoiceBridge verwerkt</value></data>
   <data name="Hero_Flow_ProcessingDesc" xml:space="preserve"><value>Klant opzoeken of aanmaken, regels overnemen</value></data>
   <data name="Hero_Flow_Ready" xml:space="preserve"><value>Factuur klaar in Moneybird</value></data>
   <data name="Hero_Flow_ReadyDesc" xml:space="preserve"><value>Als concept, klaar om te versturen</value></data>
@@ -78,7 +78,7 @@
   <data name="HowItWorks_Desc" xml:space="preserve"><value>Je koppelt je webshop één keer aan Moneybird. Daarna gaat elke bestelling dezelfde drie stappen door.</value></data>
   <data name="Step_Number" xml:space="preserve"><value>STAP {0}</value></data>
   <data name="Step1_Title" xml:space="preserve"><value>Klant bestelt in je webshop</value></data>
-  <data name="Step1_Desc" xml:space="preserve"><value>OrderSync kijkt elke paar minuten of er nieuwe bestellingen zijn. Je hoeft niets te doen.</value></data>
+  <data name="Step1_Desc" xml:space="preserve"><value>InvoiceBridge kijkt elke paar minuten of er nieuwe bestellingen zijn. Je hoeft niets te doen.</value></data>
   <data name="Step2_Title" xml:space="preserve"><value>De factuur wordt gemaakt</value></data>
   <data name="Step2_Desc" xml:space="preserve"><value>Klantgegevens, producten, aantallen en prijzen worden precies overgenomen in Moneybird.</value></data>
   <data name="Step3_Title" xml:space="preserve"><value>Klaar om te versturen</value></data>
@@ -88,9 +88,9 @@
   <data name="Trust_Title" xml:space="preserve"><value>Gebouwd om op te vertrouwen</value></data>
   <data name="Trust_Desc" xml:space="preserve"><value>Een koppeling is pas fijn als je er niet meer naar hoeft om te kijken.</value></data>
   <data name="Trust1_Title" xml:space="preserve"><value>Nooit dubbele facturen</value></data>
-  <data name="Trust1_Desc" xml:space="preserve"><value>Ook na een storing of herstart controleert OrderSync eerst of de factuur al bestaat.</value></data>
+  <data name="Trust1_Desc" xml:space="preserve"><value>Ook na een storing of herstart controleert InvoiceBridge eerst of de factuur al bestaat.</value></data>
   <data name="Trust2_Title" xml:space="preserve"><value>Storingen worden opgevangen</value></data>
-  <data name="Trust2_Desc" xml:space="preserve"><value>Is de webshop of Moneybird even niet bereikbaar? Dan probeert OrderSync het vanzelf opnieuw.</value></data>
+  <data name="Trust2_Desc" xml:space="preserve"><value>Is de webshop of Moneybird even niet bereikbaar? Dan probeert InvoiceBridge het vanzelf opnieuw.</value></data>
   <data name="Trust3_Title" xml:space="preserve"><value>Altijd inzicht</value></data>
   <data name="Trust3_Desc" xml:space="preserve"><value>Je ziet per bestelling of die gefactureerd is, en zo niet, waarom niet, in gewone taal.</value></data>
 
@@ -100,10 +100,10 @@
   <data name="CTA_Btn" xml:space="preserve"><value>Start de live demo</value></data>
 
   <!-- Demo page -->
-  <data name="Demo_PageTitle" xml:space="preserve"><value>Live demo – OrderSync</value></data>
+  <data name="Demo_PageTitle" xml:space="preserve"><value>Live demo – InvoiceBridge</value></data>
   <data name="Demo_Eyebrow" xml:space="preserve"><value>Live demo</value></data>
   <data name="Demo_Title" xml:space="preserve"><value>Van bestelling naar factuur, live</value></data>
-  <data name="Demo_Lead" xml:space="preserve"><value>Plaats een testbestelling in de voorbeeldwebshop en kijk hoe OrderSync er binnen een paar seconden een factuur van maakt.</value></data>
+  <data name="Demo_Lead" xml:space="preserve"><value>Plaats een testbestelling in de voorbeeldwebshop en kijk hoe InvoiceBridge er binnen een paar seconden een factuur van maakt.</value></data>
   <data name="Demo_TryTitle" xml:space="preserve"><value>Probeer het zelf</value></data>
   <data name="Demo_TryDesc" xml:space="preserve"><value>Kies wat je wilt zien: een normale bestelling, of een bestelling waarbij de webshop even hapert.</value></data>
   <data name="Demo_NotConfigured" xml:space="preserve"><value>De demo is even niet beschikbaar: er kunnen nu geen facturen worden aangemaakt. Bekijk gerust de facturen hieronder.</value></data>
@@ -112,10 +112,10 @@
   <data name="Demo_Btn_TestOutage" xml:space="preserve"><value>Test met een storing</value></data>
   <data name="Timeline_Step1_Title" xml:space="preserve"><value>Bestelling komt binnen</value></data>
   <data name="Timeline_Step1_Desc" xml:space="preserve"><value>Een fictieve klant bestelt in de webshop.</value></data>
-  <data name="Timeline_Step2_Title" xml:space="preserve"><value>OrderSync maakt de factuur</value></data>
+  <data name="Timeline_Step2_Title" xml:space="preserve"><value>InvoiceBridge maakt de factuur</value></data>
   <data name="Timeline_Step2_Title_Failed" xml:space="preserve"><value>Even niet gelukt</value></data>
   <data name="Timeline_Step2_Desc" xml:space="preserve"><value>Klant opzoeken in Moneybird en de factuurregels overnemen.</value></data>
-  <data name="Timeline_Step2_Desc_Failed" xml:space="preserve"><value>OrderSync probeert het vanzelf opnieuw, of je doet het nu zelf.</value></data>
+  <data name="Timeline_Step2_Desc_Failed" xml:space="preserve"><value>InvoiceBridge probeert het vanzelf opnieuw, of je doet het nu zelf.</value></data>
   <data name="Timeline_Step2_RetryBtn" xml:space="preserve"><value>Nu opnieuw proberen</value></data>
   <data name="Timeline_Step3_Title" xml:space="preserve"><value>Factuur staat klaar</value></data>
   <data name="Timeline_Step3_Elapsed" xml:space="preserve"><value>Gefactureerd in {0:0.0} seconden. Zonder iets over te typen.</value></data>
@@ -138,7 +138,7 @@
   <data name="Orders_NotProcessed" xml:space="preserve"><value>Nog niet verwerkt</value></data>
   <data name="Orders_Invoice_Link" xml:space="preserve"><value>Factuur</value></data>
   <data name="Orders_Retry_Btn" xml:space="preserve"><value>Opnieuw proberen</value></data>
-  <data name="Orders_AutoRetry" xml:space="preserve"><value>OrderSync probeert het automatisch opnieuw (poging {0} van {1}).</value></data>
+  <data name="Orders_AutoRetry" xml:space="preserve"><value>InvoiceBridge probeert het automatisch opnieuw (poging {0} van {1}).</value></data>
   <data name="Orders_AutoRetry_Stopped" xml:space="preserve"><value>Automatisch opnieuw proberen is gestopt; probeer het handmatig.</value></data>
   <data name="Orders_ShowMore" xml:space="preserve"><value>Toon meer bestellingen</value></data>
   <data name="Notice_PlaceOrder_Error" xml:space="preserve"><value>Er ging iets mis bij het plaatsen van de bestelling. Probeer het zo nog eens.</value></data>
@@ -147,7 +147,7 @@
   <data name="Notice_Retry_Error" xml:space="preserve"><value>Opnieuw proberen lukte niet. Probeer het zo nog eens.</value></data>
 
   <!-- Invoice page -->
-  <data name="Invoice_PageTitle" xml:space="preserve"><value>Factuur {0} – OrderSync</value></data>
+  <data name="Invoice_PageTitle" xml:space="preserve"><value>Factuur {0} – InvoiceBridge</value></data>
   <data name="Invoice_Back" xml:space="preserve"><value>Terug naar de live demo</value></data>
   <data name="Invoice_OpenMoneybird" xml:space="preserve"><value>Open in Moneybird</value></data>
   <data name="Invoice_NotFound_Title" xml:space="preserve"><value>Factuur niet gevonden</value></data>
@@ -157,7 +157,7 @@
   <data name="Invoice_NotReady_Desc" xml:space="preserve"><value>Bestelling {0} is nog niet gefactureerd.</value></data>
   <data name="Invoice_Loading_Title" xml:space="preserve"><value>Factuurgegevens worden opgehaald</value></data>
   <data name="Invoice_Loading_Desc" xml:space="preserve"><value>Deze factuur staat in Moneybird, maar de details zijn hier nog niet bekend. Probeer het over een paar minuten opnieuw.</value></data>
-  <data name="Invoice_Synced_Notice" xml:space="preserve"><value>Deze factuur is automatisch door OrderSync in Moneybird aangemaakt op {0}. Zo ziet de klant hem straks.</value></data>
+  <data name="Invoice_Synced_Notice" xml:space="preserve"><value>Deze factuur is automatisch door InvoiceBridge in Moneybird aangemaakt op {0}. Zo ziet de klant hem straks.</value></data>
   <data name="Invoice_Moneybird_Heading" xml:space="preserve"><value>Opgehaald uit Moneybird</value></data>
   <data name="Invoice_Moneybird_Status" xml:space="preserve"><value>Status:</value></data>
   <data name="Invoice_Moneybird_Created" xml:space="preserve"><value>Aangemaakt:</value></data>
@@ -177,7 +177,7 @@
   <data name="Invoice_ID_Label" xml:space="preserve"><value>Factuur-ID</value></data>
 
   <!-- Admin page -->
-  <data name="Admin_PageTitle" xml:space="preserve"><value>Beheerder – OrderSync</value></data>
+  <data name="Admin_PageTitle" xml:space="preserve"><value>Beheerder – InvoiceBridge</value></data>
   <data name="Admin_Eyebrow" xml:space="preserve"><value>Beheer</value></data>
   <data name="Admin_Title" xml:space="preserve"><value>Inloggen als beheerder</value></data>
   <data name="Admin_Desc" xml:space="preserve"><value>Voer de beheerderscode in om de beheerdersweergave te activeren.</value></data>

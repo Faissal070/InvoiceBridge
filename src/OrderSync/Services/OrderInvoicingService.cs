@@ -222,9 +222,9 @@ public class OrderInvoicingService(
 
     private static string FriendlyReason(Exception ex) => ex switch
     {
-        MoneybirdException { IsRateLimited: true } => "Moneybird is even druk. OrderSync probeert het straks opnieuw.",
+        MoneybirdException { IsRateLimited: true } => "Moneybird is even druk. InvoiceBridge probeert het straks opnieuw.",
         MoneybirdException { StatusCode: HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden } =>
-            "OrderSync heeft geen toegang tot Moneybird. Controleer de koppeling.",
+            "InvoiceBridge heeft geen toegang tot Moneybird. Controleer de koppeling.",
         MoneybirdException { StatusCode: HttpStatusCode.NotFound } =>
             "De Moneybird-administratie is niet gevonden. Controleer de koppeling.",
         MoneybirdException { StatusCode: HttpStatusCode.UnprocessableEntity } => "Moneybird heeft de factuurgegevens geweigerd.",
