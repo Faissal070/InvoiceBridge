@@ -165,6 +165,7 @@ public class MoneybirdClient(HttpClient http, IOptions<MoneybirdOptions> options
             HttpStatusCode.Unauthorized => "Moneybird-token is ongeldig of verlopen (401).",
             HttpStatusCode.Forbidden => "Moneybird-token heeft geen rechten voor deze actie (403).",
             HttpStatusCode.NotFound => "Moneybird-administratie of resource niet gevonden (404). Controleer de administratie-ID.",
+            HttpStatusCode.PaymentRequired => "Moneybird sandbox-factuurlimiet bereikt (402).",
             HttpStatusCode.TooManyRequests => "Moneybird rate limit bereikt (429). Later opnieuw proberen.",
             HttpStatusCode.UnprocessableEntity => $"Moneybird weigerde de gegevens (422): {await ReadErrorAsync(response, cancellationToken)}",
             _ => $"Moneybird gaf foutcode {(int)status}: {await ReadErrorAsync(response, cancellationToken)}"
@@ -184,7 +185,16 @@ public class MoneybirdClient(HttpClient http, IOptions<MoneybirdOptions> options
 
     private static MoneybirdContact ToContact(ContactDto c) => new(c.Id, c.CustomerId);
 
+    public async Task<MoneybirdInvoiceDetails> GetInvoiceAsync(string invoiceId, CancellationToken cancellationToken = default)
+    {
+        var dto = await SendAsync<InvoiceDetailDto>(HttpMethod.Get, $"sales_invoices/{Uri.EscapeDataString(invoiceId)}.json", null, cancellationToken)
+            ?? throw new MoneybirdException("Moneybird gaf een leeg antwoord bij het ophalen van de factuur.");
+        return new MoneybirdInvoiceDetails(dto.Id, dto.InvoiceId, dto.State, dto.CreatedAt);
+    }
+
     private sealed record ContactDto(string Id, string? CustomerId);
 
     private sealed record InvoiceDto(string Id, string? Reference);
+
+    private sealed record InvoiceDetailDto(string Id, string? InvoiceId, string State, DateTimeOffset CreatedAt);
 }

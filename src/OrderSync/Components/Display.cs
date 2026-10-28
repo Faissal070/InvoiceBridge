@@ -52,6 +52,7 @@ public static class Display
         SyncStatus.Processing => "Bezig",
         SyncStatus.Synced => "Gefactureerd",
         SyncStatus.Failed => "Mislukt",
+        SyncStatus.Simulated => "Gesimuleerd",
         _ => status.ToString()
     };
 
@@ -60,6 +61,7 @@ public static class Display
         SyncStatus.Synced => "success",
         SyncStatus.Processing => "info",
         SyncStatus.Failed => "danger",
+        SyncStatus.Simulated => "secondary",
         _ => "warning"
     };
 

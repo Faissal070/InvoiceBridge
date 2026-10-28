@@ -3,10 +3,12 @@ using System.Net.Http.Json;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using OrderSync.Clients;
 using OrderSync.Data;
 using OrderSync.Exceptions;
 using OrderSync.Models;
+using OrderSync.Options;
 using OrderSync.Services;
 
 namespace OrderSync.Tests.Services;
@@ -364,11 +366,15 @@ public sealed class OrderInvoicingServiceTests : IDisposable
 
     private async Task<InvoiceRunResult> RunAsync() => await CreateService().InvoicePendingOrdersAsync();
 
-    private OrderInvoicingService CreateService(OrderChangeNotifier? notifier = null)
+    private OrderInvoicingService CreateService(OrderChangeNotifier? notifier = null, SandboxSimulationService? simulation = null)
     {
         var db = new OrderSyncDbContext(dbOptions);
         var shopClient = new MockShopClient(new HttpClient(shop, disposeHandler: false) { BaseAddress = new Uri("http://shop.test/") });
-        return new OrderInvoicingService(db, moneybird, shopClient, notifier ?? new OrderChangeNotifier(), time, NullLogger<OrderInvoicingService>.Instance);
+        // Use a high limit so existing tests never trigger simulation mode.
+        var opts = Options.Create(new MoneybirdOptions { SandboxInvoiceLimit = 1000 });
+        return new OrderInvoicingService(db, moneybird, shopClient, notifier ?? new OrderChangeNotifier(), time, opts,
+            simulation ?? new SandboxSimulationService(NullLogger<SandboxSimulationService>.Instance),
+            NullLogger<OrderInvoicingService>.Instance);
     }
 
     private async Task AddOrderAsync(string orderId, SyncStatus status = SyncStatus.Pending,
@@ -460,5 +466,8 @@ public sealed class OrderInvoicingServiceTests : IDisposable
             Invoices.Add(created);
             return Task.FromResult(created);
         }
+
+        public Task<MoneybirdInvoiceDetails> GetInvoiceAsync(string invoiceId, CancellationToken cancellationToken = default) =>
+            throw new NotImplementedException();
     }
 }

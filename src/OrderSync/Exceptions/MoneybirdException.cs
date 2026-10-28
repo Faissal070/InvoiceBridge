@@ -11,4 +11,6 @@ public class MoneybirdException(string message, HttpStatusCode? statusCode = nul
     public HttpStatusCode? StatusCode { get; } = statusCode;
 
     public bool IsRateLimited => StatusCode == HttpStatusCode.TooManyRequests;
+
+    public bool IsPaymentRequired => StatusCode == HttpStatusCode.PaymentRequired;
 }
