@@ -371,7 +371,7 @@ public sealed class OrderInvoicingServiceTests : IDisposable
         var db = new OrderSyncDbContext(dbOptions);
         var shopClient = new MockShopClient(new HttpClient(shop, disposeHandler: false) { BaseAddress = new Uri("http://shop.test/") });
         // Use a high limit so existing tests never trigger simulation mode.
-        var opts = Options.Create(new MoneybirdOptions { SandboxInvoiceLimit = 1000 });
+        var opts = Microsoft.Extensions.Options.Options.Create(new MoneybirdOptions { SandboxInvoiceLimit = 1000 });
         return new OrderInvoicingService(db, moneybird, shopClient, notifier ?? new OrderChangeNotifier(), time, opts,
             simulation ?? new SandboxSimulationService(NullLogger<SandboxSimulationService>.Instance),
             NullLogger<OrderInvoicingService>.Instance);

@@ -159,8 +159,11 @@ public sealed class DemoOrderServiceTests : IDisposable
     private OrderInvoicingService CreateInvoicing()
     {
         var shop = new MockShopClient(new HttpClient(new StoreHandler(store)) { BaseAddress = new Uri("http://shop.test/") });
+        // Use a high limit so these tests never trigger simulation mode.
+        var opts = Microsoft.Extensions.Options.Options.Create(new MoneybirdOptions { SandboxInvoiceLimit = 1000 });
         return new OrderInvoicingService(new OrderSyncDbContext(dbOptions), moneybird, shop, new OrderChangeNotifier(),
-            new FixedTime(Now), NullLogger<OrderInvoicingService>.Instance);
+            new FixedTime(Now), opts, new SandboxSimulationService(NullLogger<SandboxSimulationService>.Instance),
+            NullLogger<OrderInvoicingService>.Instance);
     }
 
     private async Task AddDemoOrderAsync(string orderId, DateTimeOffset createdAt, bool isDemo = true)
@@ -213,5 +216,8 @@ public sealed class DemoOrderServiceTests : IDisposable
             var n = Interlocked.Increment(ref createdInvoices);
             return Task.FromResult(new MoneybirdInvoice($"inv-{n}", invoice.Reference));
         }
+
+        public Task<MoneybirdInvoiceDetails> GetInvoiceAsync(string invoiceId, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
     }
 }
