@@ -8,8 +8,6 @@ Many small webshops still retype every order into their accounting software: cus
 
 ## Screenshots
 
-<!-- Add the images to docs/screenshots/ with these file names. -->
-
 | Landing page | Live demo | Invoice |
 |---|---|---|
 | ![Landing page](docs/screenshots/landing.png) | ![Live demo](docs/screenshots/demo.png) | ![Invoice](docs/screenshots/invoice.png) |
