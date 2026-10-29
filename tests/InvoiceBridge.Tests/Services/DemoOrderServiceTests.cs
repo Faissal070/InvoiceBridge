@@ -126,17 +126,14 @@ public sealed class DemoOrderServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Order_is_placed_and_simulated_when_moneybird_is_not_configured()
+    public async Task Nothing_is_placed_when_moneybird_is_not_configured()
     {
         moneybird.IsConfigured = false;
 
         var result = await CreateService().PlaceOrderAsync("visitor-1", false);
 
-        Assert.True(result.Accepted);
-        Assert.True(await CreateInvoicing().InvoiceOrderAsync(result.SyncedOrderId!.Value));
-        using var db = new InvoiceBridgeDbContext(dbOptions);
-        Assert.Equal(SyncStatus.Simulated, (await db.SyncedOrders.SingleAsync()).Status);
-        Assert.Equal(0, moneybird.CreatedInvoices);
+        Assert.False(result.Accepted);
+        Assert.Equal(20, store.GetAll().Count);
     }
 
     [Fact]
