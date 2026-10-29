@@ -81,9 +81,3 @@ Run the tests with:
 ```bash
 dotnet test
 ```
-
-## About me
-
-Built by **[Your Name]**, .NET developer.
-
-[LinkedIn](https://www.linkedin.com/in/your-profile/)
