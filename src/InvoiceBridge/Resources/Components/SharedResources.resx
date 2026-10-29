@@ -121,6 +121,7 @@
   <data name="Timeline_Step3_Elapsed" xml:space="preserve"><value>Gefactureerd in {0:0.0} seconden. Zonder iets over te typen.</value></data>
   <data name="Timeline_Step3_Retried" xml:space="preserve"><value>Alsnog gefactureerd. Zonder iets over te typen.</value></data>
   <data name="Timeline_Step3_ViewInvoice" xml:space="preserve"><value>Bekijk de factuur</value></data>
+  <data name="Timeline_Step3_VisitorNote" xml:space="preserve"><value>Moneybird zelf is mijn testadministratie, dus de factuur bekijk je hier in de app.</value></data>
   <data name="Timeline_Step3_Desc" xml:space="preserve"><value>Als concept in Moneybird, klaar om te versturen.</value></data>
   <data name="Demo_Hint" xml:space="preserve"><value>Alle namen en bedragen zijn fictief. Je kunt een paar testbestellingen per {0} minuten plaatsen.</value></data>
   <data name="Admin_SandboxNote" xml:space="preserve"><value>Moneybird sandbox-facturen deze maand</value></data>
@@ -161,6 +162,7 @@
   <data name="Invoice_Moneybird_Heading" xml:space="preserve"><value>Opgehaald uit Moneybird</value></data>
   <data name="Invoice_Moneybird_Status" xml:space="preserve"><value>Status:</value></data>
   <data name="Invoice_Moneybird_Created" xml:space="preserve"><value>Aangemaakt:</value></data>
+  <data name="Invoice_Moneybird_VisitorNote" xml:space="preserve"><value>Moneybird zelf kun je niet openen, want het is mijn testadministratie. Deze gegevens komen rechtstreeks uit Moneybird.</value></data>
   <data name="Invoice_Simulated_Notice" xml:space="preserve"><value>Demo-modus: deze factuur is lokaal gesimuleerd en staat niet in Moneybird.</value></data>
   <data name="Invoice_Simulated_Title" xml:space="preserve"><value>Gesimuleerde factuur</value></data>
   <data name="Invoice_Draft_Title" xml:space="preserve"><value>Conceptfactuur</value></data>
