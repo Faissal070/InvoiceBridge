@@ -400,22 +400,18 @@ public sealed class OrderInvoicingServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Orders_are_simulated_when_moneybird_is_not_configured()
+    public async Task Nothing_happens_when_moneybird_is_not_configured()
     {
         await AddOrderAsync("WS-1");
         moneybird.IsConfigured = false;
-        var simulation = new SandboxSimulationService(NullLogger<SandboxSimulationService>.Instance);
 
-        var result = await CreateService(simulation: simulation).InvoicePendingOrdersAsync();
+        var result = await RunAsync();
 
-        Assert.Equal(1, result.Simulated);
-        Assert.Equal(SimulationReason.NotConfigured, simulation.Reason);
+        Assert.True(result.NotConfigured);
         Assert.Equal(0, moneybird.FindInvoiceCalls);
-        Assert.Empty(moneybird.CreatedInvoices);
         var order = await GetOrderAsync("WS-1");
-        Assert.Equal(SyncStatus.Simulated, order.Status);
-        Assert.Null(order.MoneybirdInvoiceId);
-        Assert.Equal("Sanne de Vries", order.CustomerName);
+        Assert.Equal(SyncStatus.Pending, order.Status);
+        Assert.Equal(0, order.Attempts);
     }
 
     private async Task<InvoiceRunResult> RunAsync() => await CreateService().InvoicePendingOrdersAsync();

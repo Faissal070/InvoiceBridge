@@ -38,7 +38,14 @@
         <h2 id="try-title" class="card-title">@L["Demo_TryTitle"]</h2>
         <p class="muted mt-xs">@L["Demo_TryDesc"]</p>
 
-        @if (!_isAdmin && SimulationService.IsSimulating)
+        @if (!MoneybirdOptions.Value.IsConfigured)
+        {
+            <div class="notice notice-info mt-md">
+                <Icon Name="info" />
+                <span>@L["Demo_NotConfigured"]</span>
+            </div>
+        }
+        else if (!_isAdmin && SimulationService.IsSimulating)
         {
             <div class="notice notice-info mt-md">
                 <Icon Name="info" />
@@ -47,10 +54,10 @@
         }
 
         <div class="try-actions">
-            <button class="btn btn-primary btn-lg" @onclick="() => PlaceOrderAsync(simulateOutage: false)" disabled="@busy">
+            <button class="btn btn-primary btn-lg" @onclick="() => PlaceOrderAsync(simulateOutage: false)" disabled="@(busy || !MoneybirdOptions.Value.IsConfigured)">
                 <Icon Name="plus" /> @L["Demo_Btn_PlaceOrder"]
             </button>
-            <button class="btn btn-secondary btn-lg" @onclick="() => PlaceOrderAsync(simulateOutage: true)" disabled="@busy">
+            <button class="btn btn-secondary btn-lg" @onclick="() => PlaceOrderAsync(simulateOutage: true)" disabled="@(busy || !MoneybirdOptions.Value.IsConfigured)">
                 <Icon Name="alert" /> @L["Demo_Btn_TestOutage"]
             </button>
         </div>

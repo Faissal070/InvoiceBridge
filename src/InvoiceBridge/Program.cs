@@ -58,12 +58,6 @@ using (var scope = app.Services.CreateScope())
     scope.ServiceProvider.GetRequiredService<InvoiceBridgeDbContext>().Database.Migrate();
 }
 
-// Without Moneybird secrets the app still works: invoices are simulated locally. Logged once, here.
-if (!app.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<MoneybirdOptions>>().Value.IsConfigured)
-{
-    app.Services.GetRequiredService<SandboxSimulationService>().ActivateNotConfigured();
-}
-
 // `dotnet run -- --cleanup-demo`: back up the database, remove unfinished demo orders and exit.
 if (args.Contains("--cleanup-demo"))
 {

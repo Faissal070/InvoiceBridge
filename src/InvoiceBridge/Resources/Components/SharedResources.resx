@@ -106,6 +106,7 @@
   <data name="Demo_Lead" xml:space="preserve"><value>Plaats een testbestelling in de voorbeeldwebshop en kijk hoe InvoiceBridge er binnen een paar seconden een factuur van maakt.</value></data>
   <data name="Demo_TryTitle" xml:space="preserve"><value>Probeer het zelf</value></data>
   <data name="Demo_TryDesc" xml:space="preserve"><value>Kies wat je wilt zien: een normale bestelling, of een bestelling waarbij de webshop even hapert.</value></data>
+  <data name="Demo_NotConfigured" xml:space="preserve"><value>De demo is even niet beschikbaar: er kunnen nu geen facturen worden aangemaakt. Bekijk gerust de facturen hieronder.</value></data>
   <data name="Demo_SimulationNotice" xml:space="preserve"><value>Demo-modus: nieuwe facturen worden gesimuleerd.</value></data>
   <data name="Demo_Btn_PlaceOrder" xml:space="preserve"><value>Plaats een testbestelling</value></data>
   <data name="Demo_Btn_TestOutage" xml:space="preserve"><value>Test met een storing</value></data>
