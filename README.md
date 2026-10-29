@@ -15,7 +15,7 @@ Many small webshops still retype every order into their accounting software: cus
 ## Features
 
 - **Automatic Moneybird invoices**: a background worker picks up new orders, finds or creates the contact and creates the invoice.
-- **Automatic retries**: a failed order is retried on every sync cycle, up to 5 attempts, and can also be retried manually from the dashboard.
+- **Retry with backoff**: a failed order is retried automatically after 10 s, 30 s, 1 min and 2 min (up to 5 attempts). The dashboard shows a countdown to the next attempt, and you can also retry manually.
 - **Idempotent (no duplicate invoices)**: before creating an invoice, InvoiceBridge checks Moneybird for an existing invoice with the order reference, so it is safe after a crash or restart.
 - **Error handling with an outage demo**: one click simulates a webshop outage, so you can watch the order fail, show a clear message and recover.
 - **Simulation mode at the sandbox limit**: when the monthly sandbox invoice limit is near, or Moneybird returns `402`, the app switches to simulated invoices instead of failing.

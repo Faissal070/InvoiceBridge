@@ -33,6 +33,18 @@ public class OrderInvoicingService(
 {
     public const int MaxAutomaticAttempts = 5;
 
+    /// <summary>Backoff before the next automatic retry, after 1, 2, 3 or 4 failed attempts.</summary>
+    private static readonly TimeSpan[] RetryDelays =
+        [TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(30), TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(2)];
+
+    public static TimeSpan RetryDelayAfter(int attempts) => RetryDelays[Math.Clamp(attempts, 1, RetryDelays.Length) - 1];
+
+    /// <summary>When the worker will retry this order automatically, or null if it won't.</summary>
+    public static DateTimeOffset? NextAutomaticRetryAt(SyncedOrder order) =>
+        order is { Status: SyncStatus.Failed, LastAttemptAt: { } last } && order.Attempts < MaxAutomaticAttempts
+            ? last + RetryDelayAfter(order.Attempts)
+            : null;
+
     public static readonly TimeSpan StaleProcessingAfter = TimeSpan.FromMinutes(10);
 
     public bool IsConfigured => moneybird.IsConfigured;
@@ -299,9 +311,18 @@ public class OrderInvoicingService(
     private static Expression<Func<SyncedOrder, bool>> IsEligible(bool force, DateTimeOffset now)
     {
         var staleBefore = now - StaleProcessingAfter;
+        // Latest LastAttemptAt that makes a failed order due for its next automatic retry, per attempt count.
+        DateTimeOffset dueIfTriedBy(int attempts) => now - RetryDelayAfter(attempts);
+        var due1 = dueIfTriedBy(1);
+        var due2 = dueIfTriedBy(2);
+        var due3 = dueIfTriedBy(3);
+        var due4 = dueIfTriedBy(4);
         return o =>
             o.Status == SyncStatus.Pending
-            || (o.Status == SyncStatus.Failed && (force || o.Attempts < MaxAutomaticAttempts))
+            || (o.Status == SyncStatus.Failed && (force
+                || (o.Attempts < MaxAutomaticAttempts
+                    && (o.LastAttemptAt == null
+                        || o.LastAttemptAt <= (o.Attempts <= 1 ? due1 : o.Attempts == 2 ? due2 : o.Attempts == 3 ? due3 : due4)))))
             || (o.Status == SyncStatus.Processing && o.LastAttemptAt < staleBefore);
     }
 

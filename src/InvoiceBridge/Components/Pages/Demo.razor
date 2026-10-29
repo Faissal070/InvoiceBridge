@@ -91,7 +91,7 @@
                     <strong>@(run?.Step == DemoStep.Failed ? L["Timeline_Step2_Title_Failed"].Value : L["Timeline_Step2_Title"].Value)</strong>
                     @if (run?.Step == DemoStep.Failed)
                     {
-                        <span>@run.Error @L["Timeline_Step2_Desc_Failed"]</span>
+                        <span>@run.Error @(orders?.FirstOrDefault(o => o.Id == run.SyncedOrderId) is { } runOrder ? AutoRetryText(runOrder) : L["Timeline_Step2_Desc_Failed"].Value)</span>
                         <div class="actions">
                             <button class="btn btn-secondary btn-sm" @onclick="() => RetryAsync(run.SyncedOrderId, run.Order.OrderId)" disabled="@busy">
                                 <Icon Name="sync" Size="16" /> @L["Timeline_Step2_RetryBtn"]
@@ -219,9 +219,7 @@
                             <Icon Name="alert" Size="16" />
                             <span>
                                 @order.LastError
-                                @(order.Attempts < OrderInvoicingService.MaxAutomaticAttempts
-                                    ? L["Orders_AutoRetry", order.Attempts, OrderInvoicingService.MaxAutomaticAttempts].Value
-                                    : L["Orders_AutoRetry_Stopped"].Value)
+                                @AutoRetryText(order)
                             </span>
                         </div>
                     }
@@ -266,6 +264,7 @@
     private Notice? notice;
     private bool busy;
     private Timer? refreshTimer;
+    private Timer? countdownTimer;
     private int refreshQueued;
     private bool _isAdmin;
     private int _syncedThisMonth;
@@ -291,6 +290,12 @@
         Notifier.Changed += OnOrdersChanged;
         // Fallback in case a change notification is missed; also keeps "x min geleden" current.
         refreshTimer = new Timer(_ => OnOrdersChanged(), null, AutoRefreshInterval, AutoRefreshInterval);
+        // Ticks the "retry in x sec" countdown, only while an automatic retry is coming up.
+        countdownTimer = new Timer(_ =>
+        {
+            if (orders?.Any(o => OrderInvoicingService.NextAutomaticRetryAt(o) is not null) == true)
+                _ = InvokeAsync(StateHasChanged);
+        }, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
     }
 
     private Task PersistState()
@@ -305,6 +310,17 @@
         _persistSubscription.Dispose();
         Notifier.Changed -= OnOrdersChanged;
         refreshTimer?.Dispose();
+        countdownTimer?.Dispose();
+    }
+
+    private string AutoRetryText(SyncedOrder order)
+    {
+        if (OrderInvoicingService.NextAutomaticRetryAt(order) is not { } next)
+            return L["Orders_AutoRetry_Stopped"].Value;
+        var seconds = (int)Math.Ceiling((next - Time.GetUtcNow()).TotalSeconds);
+        return seconds > 0
+            ? L["Orders_AutoRetry", seconds, order.Attempts + 1, OrderInvoicingService.MaxAutomaticAttempts].Value
+            : L["Orders_AutoRetry_Now"].Value;
     }
 
     /// <summary>Reloads once for a burst of changes; called from other threads.</summary>
@@ -381,6 +397,8 @@
             case SyncStatus.Failed:
                 run.Step = DemoStep.Failed;
                 run.Error = order.LastError;
+                // A later (automatic) retry invoices it; the timing of this failed attempt no longer applies.
+                run.Elapsed = null;
                 break;
             case SyncStatus.Pending or SyncStatus.Processing when run.Step == DemoStep.Failed:
                 run.Step = DemoStep.Invoicing;

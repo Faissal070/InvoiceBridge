@@ -19,7 +19,7 @@ public class OrderSyncWorker(
             return;
         }
 
-        var interval = TimeSpan.FromMinutes(configuration.GetValue("Sync:IntervalMinutes", 2));
+        var interval = TimeSpan.FromSeconds(configuration.GetValue("Sync:IntervalSeconds", 10));
         logger.LogInformation("Order sync worker started, interval {Interval}", interval);
 
         using var timer = new PeriodicTimer(interval);

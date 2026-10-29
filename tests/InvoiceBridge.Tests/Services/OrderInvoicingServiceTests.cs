@@ -269,12 +269,61 @@ public sealed class OrderInvoicingServiceTests : IDisposable
         await RunAsync();
 
         moneybird.CreateInvoiceError = null;
+        time.Advance(OrderInvoicingService.RetryDelayAfter(1));
         await RunAsync();
 
         var order = await GetOrderAsync("WS-1");
         Assert.Equal(SyncStatus.Synced, order.Status);
         Assert.Equal(2, order.Attempts);
         Assert.Null(order.LastError);
+    }
+
+    [Fact]
+    public async Task Failed_order_waits_for_its_backoff_before_the_next_automatic_retry()
+    {
+        await AddOrderAsync("WS-1");
+        moneybird.CreateInvoiceError = new MoneybirdException("tijdelijke fout");
+        await RunAsync();
+        await RunAsync();
+        Assert.Equal(1, (await GetOrderAsync("WS-1")).Attempts);
+
+        time.Advance(OrderInvoicingService.RetryDelayAfter(1));
+        await RunAsync();
+        Assert.Equal(2, (await GetOrderAsync("WS-1")).Attempts);
+
+        // The second delay is longer than the first.
+        time.Advance(OrderInvoicingService.RetryDelayAfter(1));
+        await RunAsync();
+        Assert.Equal(2, (await GetOrderAsync("WS-1")).Attempts);
+
+        time.Advance(OrderInvoicingService.RetryDelayAfter(2));
+        await RunAsync();
+        Assert.Equal(3, (await GetOrderAsync("WS-1")).Attempts);
+    }
+
+    [Fact]
+    public async Task Next_automatic_retry_time_follows_the_backoff()
+    {
+        await AddOrderAsync("WS-1");
+        moneybird.CreateInvoiceError = new MoneybirdException("tijdelijke fout");
+        await RunAsync();
+
+        var order = await GetOrderAsync("WS-1");
+        Assert.Equal(Now + OrderInvoicingService.RetryDelayAfter(1), OrderInvoicingService.NextAutomaticRetryAt(order));
+        Assert.True(OrderInvoicingService.RetryDelayAfter(2) > OrderInvoicingService.RetryDelayAfter(1));
+    }
+
+    [Fact]
+    public async Task Manual_retry_skips_the_backoff()
+    {
+        await AddOrderAsync("WS-1");
+        moneybird.CreateInvoiceError = new MoneybirdException("tijdelijke fout");
+        await RunAsync();
+
+        moneybird.CreateInvoiceError = null;
+        var order = await GetOrderAsync("WS-1");
+        Assert.True(await CreateService().RetryOrderAsync(order.Id));
+        Assert.Equal(SyncStatus.Synced, (await GetOrderAsync("WS-1")).Status);
     }
 
     [Fact]
@@ -285,6 +334,7 @@ public sealed class OrderInvoicingServiceTests : IDisposable
         for (var i = 0; i < OrderInvoicingService.MaxAutomaticAttempts + 2; i++)
         {
             await RunAsync();
+            time.Advance(TimeSpan.FromHours(1));
         }
 
         var order = await GetOrderAsync("WS-1");
@@ -404,6 +454,8 @@ public sealed class OrderInvoicingServiceTests : IDisposable
     private sealed class FixedTime(DateTimeOffset now) : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => now;
+
+        public void Advance(TimeSpan by) => now += by;
     }
 
     private sealed class ShopHandler : HttpMessageHandler
