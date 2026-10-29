@@ -34,11 +34,6 @@ public class DemoOrderService(
     /// <param name="simulateOutage">The webshop fails the first request for this order.</param>
     public async Task<DemoOrderResult> PlaceOrderAsync(string visitorId, bool simulateOutage, CancellationToken cancellationToken = default)
     {
-        if (!invoicing.IsConfigured)
-        {
-            return DemoOrderResult.Refused("Factureren staat op dit moment uit, dus er kunnen geen demobestellingen worden geplaatst.");
-        }
-
         await PlaceGate.WaitAsync(cancellationToken);
         try
         {

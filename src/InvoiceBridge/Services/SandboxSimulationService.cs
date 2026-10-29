@@ -1,10 +1,10 @@
 namespace InvoiceBridge.Services;
 
-public enum SimulationReason { None, LocalLimit, PaymentRequired }
+public enum SimulationReason { None, LocalLimit, PaymentRequired, NotConfigured }
 
 /// <summary>
 /// Singleton that tracks whether the app has switched to simulation mode because the Moneybird
-/// sandbox invoice limit was reached or Moneybird returned 402.
+/// sandbox invoice limit was reached, Moneybird returned 402, or Moneybird is not configured at all.
 /// </summary>
 public sealed class SandboxSimulationService(ILogger<SandboxSimulationService> logger)
 {
@@ -34,9 +34,23 @@ public sealed class SandboxSimulationService(ILogger<SandboxSimulationService> l
         {
             if (_reason == SimulationReason.None)
                 logger.LogWarning("Sandbox-factuurlimiet bereikt; overschakelen naar simulatiemodus (lokale teller).");
-            // Don't downgrade from PaymentRequired to LocalLimit.
-            if (_reason != SimulationReason.PaymentRequired)
+            // Don't downgrade from PaymentRequired or NotConfigured to LocalLimit.
+            if (_reason == SimulationReason.None)
                 _reason = SimulationReason.LocalLimit;
+        }
+    }
+
+    /// <summary>
+    /// Switches to simulation because there are no Moneybird secrets. Permanent for this process:
+    /// there is no hourly retry, because the configuration only changes on a restart.
+    /// </summary>
+    public void ActivateNotConfigured()
+    {
+        lock (_lock)
+        {
+            if (_reason != SimulationReason.NotConfigured)
+                logger.LogWarning("Geen Moneybird-configuratie gevonden; de app draait in simulatiemodus en facturen worden lokaal gesimuleerd.");
+            _reason = SimulationReason.NotConfigured;
         }
     }
 

@@ -106,7 +106,6 @@
   <data name="Demo_Lead" xml:space="preserve"><value>Place a test order in the sample webshop and see how InvoiceBridge turns it into an invoice within seconds.</value></data>
   <data name="Demo_TryTitle" xml:space="preserve"><value>Try it yourself</value></data>
   <data name="Demo_TryDesc" xml:space="preserve"><value>Choose what you want to see: a normal order, or an order where the webshop briefly falters.</value></data>
-  <data name="Demo_NotConfigured" xml:space="preserve"><value>The demo is temporarily unavailable: no invoices can be created at the moment. Feel free to view the invoices below.</value></data>
   <data name="Demo_SimulationNotice" xml:space="preserve"><value>Demo mode: new invoices are being simulated.</value></data>
   <data name="Demo_Btn_PlaceOrder" xml:space="preserve"><value>Place a test order</value></data>
   <data name="Demo_Btn_TestOutage" xml:space="preserve"><value>Test with an outage</value></data>

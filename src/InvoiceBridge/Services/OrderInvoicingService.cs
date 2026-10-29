@@ -47,18 +47,12 @@ public class OrderInvoicingService(
 
     public static readonly TimeSpan StaleProcessingAfter = TimeSpan.FromMinutes(10);
 
-    public bool IsConfigured => moneybird.IsConfigured;
-
     /// <summary>
     /// Invoices all orders that are pending, failed with attempts left, or stuck in Processing.
     /// </summary>
     public async Task<InvoiceRunResult> InvoicePendingOrdersAsync(CancellationToken cancellationToken = default)
     {
-        if (!moneybird.IsConfigured)
-        {
-            logger.LogWarning("Moneybird is not configured; skipping invoicing");
-            return new InvoiceRunResult(0, 0, false, NotConfigured: true);
-        }
+        EnsureSimulationWhenNotConfigured();
 
         // Count invoices sent to Moneybird this calendar month (simulated ones don't count).
         var firstOfMonth = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -158,12 +152,16 @@ public class OrderInvoicingService(
 
     private enum Outcome { Skipped, Synced, Simulated, Failed, RateLimited }
 
-    private async Task<Outcome> InvoiceAsync(int id, bool force, CancellationToken cancellationToken)
+    /// <summary>Without Moneybird secrets every order is simulated instead of skipped.</summary>
+    private void EnsureSimulationWhenNotConfigured()
     {
         if (!moneybird.IsConfigured)
-        {
-            return Outcome.Skipped;
-        }
+            simulation.ActivateNotConfigured();
+    }
+
+    private async Task<Outcome> InvoiceAsync(int id, bool force, CancellationToken cancellationToken)
+    {
+        EnsureSimulationWhenNotConfigured();
 
         var now = time.GetUtcNow();
         var claimed = await db.SyncedOrders
@@ -192,7 +190,7 @@ public class OrderInvoicingService(
             if (simulation.IsSimulating)
             {
                 await MarkSimulatedAsync(id, order);
-                logger.LogInformation("Order {OrderId} simulated (sandbox limit active)", orderId);
+                logger.LogInformation("Order {OrderId} simulated ({Reason})", orderId, simulation.Reason);
                 return Outcome.Simulated;
             }
 
