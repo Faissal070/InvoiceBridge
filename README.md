@@ -70,6 +70,12 @@ dotnet run --project src/InvoiceBridge
 
 Open <http://localhost:5168>. The database is created and migrated on startup. Without Moneybird secrets the app still starts, but invoicing is disabled.
 
+To tidy up the demo before a presentation, remove failed or unfinished demo orders. This backs up the database first and never deletes anything in Moneybird:
+
+```bash
+dotnet run --project src/InvoiceBridge -- --cleanup-demo
+```
+
 Run the tests with:
 
 ```bash

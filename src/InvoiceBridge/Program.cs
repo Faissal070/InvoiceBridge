@@ -41,6 +41,7 @@ builder.Services.AddSingleton<AdminAuthService>();
 builder.Services.Configure<DemoOptions>(builder.Configuration.GetSection(DemoOptions.SectionName));
 builder.Services.AddSingleton<DemoRateLimiter>();
 builder.Services.AddScoped<DemoOrderService>();
+builder.Services.AddScoped<DemoCleanupService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<VisitorContext>();
 builder.Services.AddScoped<CircuitHandler, VisitorCircuitHandler>();
@@ -55,6 +56,24 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     scope.ServiceProvider.GetRequiredService<InvoiceBridgeDbContext>().Database.Migrate();
+}
+
+// `dotnet run -- --cleanup-demo`: back up the database, remove unfinished demo orders and exit.
+if (args.Contains("--cleanup-demo"))
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<InvoiceBridgeDbContext>();
+    var dbPath = Path.GetFullPath(db.Database.GetDbConnection().DataSource);
+    var backupPath = Path.ChangeExtension(dbPath, $"backup-{DateTime.Now:yyyyMMdd-HHmmss}.db");
+    var vacuumSql = $"VACUUM INTO '{backupPath.Replace("'", "''")}'";
+    await db.Database.ExecuteSqlRawAsync(vacuumSql);
+    Console.WriteLine($"Backup written to {backupPath}");
+
+    var result = await scope.ServiceProvider.GetRequiredService<DemoCleanupService>().RemoveUnfinishedDemoOrdersAsync();
+    Console.WriteLine($"Removed: {(result.Removed.Count == 0 ? "none" : string.Join(", ", result.Removed))}");
+    if (result.KeptWithInvoice.Count > 0)
+        Console.WriteLine($"Kept (invoice exists in Moneybird): {string.Join(", ", result.KeptWithInvoice)}");
+    return;
 }
 
 // Configure the HTTP request pipeline.
