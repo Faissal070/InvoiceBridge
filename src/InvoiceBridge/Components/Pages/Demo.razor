@@ -114,6 +114,10 @@
                         <div class="actions">
                             <a class="link-arrow" href="@InvoiceHref(run.Order.OrderId)">@L["Timeline_Step3_ViewInvoice"] <Icon Name="arrow-right" Size="16" /></a>
                         </div>
+                        @if (!_isAdmin)
+                        {
+                            <span class="timeline-note">@L["Timeline_Step3_VisitorNote"]</span>
+                        }
                     }
                     else
                     {

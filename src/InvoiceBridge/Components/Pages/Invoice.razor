@@ -79,6 +79,10 @@
                         @L["Invoice_ID_Label"] <span class="mono">@(_moneybirdDetails.InvoiceId ?? order.MoneybirdInvoiceId)</span>
                         &nbsp;·&nbsp; @L["Invoice_Moneybird_Status"] @_moneybirdDetails.StateLabel
                         &nbsp;·&nbsp; @L["Invoice_Moneybird_Created"] @Display.DateAndTime(_moneybirdDetails.CreatedAt)
+                        @if (!_isAdmin)
+                        {
+                            <br />@L["Invoice_Moneybird_VisitorNote"]
+                        }
                     </span>
                 </div>
             }

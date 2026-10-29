@@ -121,6 +121,7 @@
   <data name="Timeline_Step3_Elapsed" xml:space="preserve"><value>Invoiced in {0:0.0} seconds. Without typing anything.</value></data>
   <data name="Timeline_Step3_Retried" xml:space="preserve"><value>Successfully invoiced. Without typing anything.</value></data>
   <data name="Timeline_Step3_ViewInvoice" xml:space="preserve"><value>View the invoice</value></data>
+  <data name="Timeline_Step3_VisitorNote" xml:space="preserve"><value>Moneybird itself is my test administration, so you view the invoice here in the app.</value></data>
   <data name="Timeline_Step3_Desc" xml:space="preserve"><value>As a draft in Moneybird, ready to send.</value></data>
   <data name="Demo_Hint" xml:space="preserve"><value>All names and amounts are fictitious. You can place a few test orders per {0} minutes.</value></data>
   <data name="Admin_SandboxNote" xml:space="preserve"><value>Moneybird sandbox invoices this month</value></data>
@@ -161,6 +162,7 @@
   <data name="Invoice_Moneybird_Heading" xml:space="preserve"><value>Fetched from Moneybird</value></data>
   <data name="Invoice_Moneybird_Status" xml:space="preserve"><value>Status:</value></data>
   <data name="Invoice_Moneybird_Created" xml:space="preserve"><value>Created:</value></data>
+  <data name="Invoice_Moneybird_VisitorNote" xml:space="preserve"><value>You can't open Moneybird itself, because it is my test administration. These details come straight from Moneybird.</value></data>
   <data name="Invoice_Simulated_Notice" xml:space="preserve"><value>Demo mode: this invoice was simulated locally and is not in Moneybird.</value></data>
   <data name="Invoice_Simulated_Title" xml:space="preserve"><value>Simulated invoice</value></data>
   <data name="Invoice_Draft_Title" xml:space="preserve"><value>Draft invoice</value></data>
