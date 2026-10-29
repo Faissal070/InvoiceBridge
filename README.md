@@ -2,6 +2,10 @@
 
 **Webshop orders become Moneybird invoices automatically. No more copying orders into your bookkeeping by hand.**
 
+[![Watch the demo video (1:14)](docs/screenshots/video-thumbnail.png)](https://github.com/Faissal070/InvoiceBridge/releases/download/v1.0.0/invoicebridge-demo.mp4)
+
+▶ **[Watch the demo video](https://github.com/Faissal070/InvoiceBridge/releases/download/v1.0.0/invoicebridge-demo.mp4)** (1:14, Dutch with captions): a test order becomes an invoice in Moneybird within seconds.
+
 Many small webshops still retype every order into their accounting software: customer, products, amounts. That is slow and error-prone, and it piles up during busy weeks. InvoiceBridge watches the webshop for new orders and turns each one into an invoice in [Moneybird](https://www.moneybird.nl/) within seconds, evenings and weekends included.
 
 > This is a portfolio project. It runs against a mock webshop and a Moneybird sandbox, using fictitious data only.
