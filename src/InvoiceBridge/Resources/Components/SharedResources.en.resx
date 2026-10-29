@@ -78,7 +78,7 @@
   <data name="HowItWorks_Desc" xml:space="preserve"><value>You connect your webshop to Moneybird once. After that, every order goes through the same three steps.</value></data>
   <data name="Step_Number" xml:space="preserve"><value>STEP {0}</value></data>
   <data name="Step1_Title" xml:space="preserve"><value>Customer orders in your webshop</value></data>
-  <data name="Step1_Desc" xml:space="preserve"><value>InvoiceBridge checks every few minutes for new orders. You don't have to do anything.</value></data>
+  <data name="Step1_Desc" xml:space="preserve"><value>InvoiceBridge checks every few seconds for new orders. You don't have to do anything.</value></data>
   <data name="Step2_Title" xml:space="preserve"><value>The invoice is created</value></data>
   <data name="Step2_Desc" xml:space="preserve"><value>Customer details, products, quantities and prices are copied exactly into Moneybird.</value></data>
   <data name="Step3_Title" xml:space="preserve"><value>Ready to send</value></data>
@@ -139,8 +139,9 @@
   <data name="Orders_NotProcessed" xml:space="preserve"><value>Not yet processed</value></data>
   <data name="Orders_Invoice_Link" xml:space="preserve"><value>Invoice</value></data>
   <data name="Orders_Retry_Btn" xml:space="preserve"><value>Try again</value></data>
-  <data name="Orders_AutoRetry" xml:space="preserve"><value>InvoiceBridge will automatically retry (attempt {0} of {1}).</value></data>
+  <data name="Orders_AutoRetry" xml:space="preserve"><value>InvoiceBridge will retry automatically in {0} s (attempt {1} of {2}).</value></data>
   <data name="Orders_AutoRetry_Stopped" xml:space="preserve"><value>Automatic retry has stopped; try manually.</value></data>
+  <data name="Orders_AutoRetry_Now" xml:space="preserve"><value>InvoiceBridge is retrying automatically now…</value></data>
   <data name="Orders_ShowMore" xml:space="preserve"><value>Show more orders</value></data>
   <data name="Notice_PlaceOrder_Error" xml:space="preserve"><value>Something went wrong while placing the order. Please try again.</value></data>
   <data name="Notice_Retry_Success" xml:space="preserve"><value>Order {0} has been successfully invoiced.</value></data>

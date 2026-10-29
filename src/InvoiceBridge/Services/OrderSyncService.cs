@@ -35,7 +35,9 @@ public class OrderSyncService(
             notifier.NotifyChanged();
         }
 
-        logger.LogInformation("Fetched {Total} orders from shop, {New} new", orders.Count, newOrders.Count);
+        // The worker polls every few seconds; only log at Information when something changed.
+        logger.Log(newOrders.Count > 0 ? LogLevel.Information : LogLevel.Debug,
+            "Fetched {Total} orders from shop, {New} new", orders.Count, newOrders.Count);
         return newOrders.Count;
     }
 }

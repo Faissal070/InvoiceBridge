@@ -78,7 +78,7 @@
   <data name="HowItWorks_Desc" xml:space="preserve"><value>Je koppelt je webshop één keer aan Moneybird. Daarna gaat elke bestelling dezelfde drie stappen door.</value></data>
   <data name="Step_Number" xml:space="preserve"><value>STAP {0}</value></data>
   <data name="Step1_Title" xml:space="preserve"><value>Klant bestelt in je webshop</value></data>
-  <data name="Step1_Desc" xml:space="preserve"><value>InvoiceBridge kijkt elke paar minuten of er nieuwe bestellingen zijn. Je hoeft niets te doen.</value></data>
+  <data name="Step1_Desc" xml:space="preserve"><value>InvoiceBridge kijkt elke paar seconden of er nieuwe bestellingen zijn. Je hoeft niets te doen.</value></data>
   <data name="Step2_Title" xml:space="preserve"><value>De factuur wordt gemaakt</value></data>
   <data name="Step2_Desc" xml:space="preserve"><value>Klantgegevens, producten, aantallen en prijzen worden precies overgenomen in Moneybird.</value></data>
   <data name="Step3_Title" xml:space="preserve"><value>Klaar om te versturen</value></data>
@@ -139,8 +139,9 @@
   <data name="Orders_NotProcessed" xml:space="preserve"><value>Nog niet verwerkt</value></data>
   <data name="Orders_Invoice_Link" xml:space="preserve"><value>Factuur</value></data>
   <data name="Orders_Retry_Btn" xml:space="preserve"><value>Opnieuw proberen</value></data>
-  <data name="Orders_AutoRetry" xml:space="preserve"><value>InvoiceBridge probeert het automatisch opnieuw (poging {0} van {1}).</value></data>
+  <data name="Orders_AutoRetry" xml:space="preserve"><value>InvoiceBridge probeert het over {0} sec automatisch opnieuw (poging {1} van {2}).</value></data>
   <data name="Orders_AutoRetry_Stopped" xml:space="preserve"><value>Automatisch opnieuw proberen is gestopt; probeer het handmatig.</value></data>
+  <data name="Orders_AutoRetry_Now" xml:space="preserve"><value>InvoiceBridge probeert het nu automatisch opnieuw…</value></data>
   <data name="Orders_ShowMore" xml:space="preserve"><value>Toon meer bestellingen</value></data>
   <data name="Notice_PlaceOrder_Error" xml:space="preserve"><value>Er ging iets mis bij het plaatsen van de bestelling. Probeer het zo nog eens.</value></data>
   <data name="Notice_Retry_Success" xml:space="preserve"><value>Bestelling {0} is alsnog gefactureerd.</value></data>
